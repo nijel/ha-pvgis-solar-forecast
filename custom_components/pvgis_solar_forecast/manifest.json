@@ -1,0 +1,17 @@
+{
+  "domain": "pvgis_solar_forecast",
+  "name": "PVGIS Solar Forecast",
+  "codeowners": [
+    "@nijel"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/nijel/ha-pvgis-solar-forecast",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/nijel/ha-pvgis-solar-forecast/issues",
+  "requirements": [
+    "aiohttp>=3.8.0"
+  ],
+  "version": "1.0.0"
+}
