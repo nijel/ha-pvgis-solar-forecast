@@ -88,7 +88,7 @@ class SolarForecastData:
     cloud_coverage_used: float | None = None
     weather_entity_available: bool = True
     clear_sky_power_now: float = 0.0
-    clear_sky_energy_today: float = 0.0  # in Wh
+    clear_sky_energy_today: float = 0.0  # in kWh
     # Historical forecast snapshots: list of past forecasts
     historical_snapshots: list[ForecastSnapshot] = field(default_factory=list)
     # Snow detection: per-array manual overrides {array_name: snow_covered}
@@ -117,7 +117,7 @@ class SolarArrayForecast:
     peak_power_tomorrow: float = 0.0
     # Per-array clear sky diagnostics
     clear_sky_power_now: float = 0.0
-    clear_sky_energy_today: float = 0.0  # in Wh
+    clear_sky_energy_today: float = 0.0  # in kWh
     # Snow detection status
     snow_covered: bool = False
 
@@ -359,7 +359,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 for h in range(24)
             )
             forecast.clear_sky_power_now = round(array_clear_sky_now)
-            forecast.clear_sky_energy_today = round(array_clear_sky_today, 1)
+            forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
 
             result.arrays[array_name] = forecast
 
@@ -371,7 +371,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             total_clear_sky_today += array_clear_sky_today
 
         result.clear_sky_power_now = round(total_clear_sky_now)
-        result.clear_sky_energy_today = round(total_clear_sky_today, 1)
+        result.clear_sky_energy_today = round(total_clear_sky_today / 1000.0, 2)
 
         # Compute total forecast
         result.total = self.compute_total_forecast(total_wh, now)
