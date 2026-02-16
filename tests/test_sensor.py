@@ -140,9 +140,6 @@ async def test_diagnostic_sensors_created(
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    state = hass.states.get("sensor.pvgis_weather_entity_available")
-    assert state is not None
-
     state = hass.states.get("sensor.pvgis_clear_sky_power_now")
     assert state is not None
 
