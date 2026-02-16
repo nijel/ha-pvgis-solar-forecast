@@ -253,7 +253,14 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             )
 
             forecast = self.compute_forecast(
-                array_data.pvgis_data, cloud_coverage, now, snow_covered
+                array_data.pvgis_data,
+                cloud_coverage,
+                now,
+                snow_covered,
+                array_config,
+                temperature_data,
+                precipitation_data,
+                snow_data,
             )
 
             # Set snow status on forecast
@@ -569,6 +576,100 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         # Snow still present
         return True
 
+    def _predict_snow_for_hour(
+        self,
+        array_config: dict[str, Any],
+        pvgis_data: PVGISData,
+        temperature_data: dict[str, float],
+        precipitation_data: dict[str, float],
+        snow_data: dict[str, float],
+        target_dt: datetime,
+    ) -> bool:
+        """Predict if array will be covered by snow at a specific future hour.
+
+        Similar to _detect_snow_on_array but for future forecast times.
+
+        Args:
+            array_config: Array configuration dict.
+            pvgis_data: PVGIS data for the array.
+            temperature_data: Temperature forecast dict.
+            precipitation_data: Precipitation forecast dict.
+            snow_data: Snow forecast dict (if available).
+            target_dt: Target datetime to predict snow for.
+
+        Returns:
+            True if array is predicted to be covered by snow at target_dt.
+        """
+        # Get panel inclination (declination)
+        inclination = array_config.get(CONF_DECLINATION, 0)
+
+        # Look back from target time for snow events
+        lookback_hours = 24
+        recent_snow = False
+
+        # Check if snow is predicted at target time or recently before
+        for hour_offset in range(-lookback_hours, 1):
+            dt = target_dt + timedelta(hours=hour_offset)
+            dt_str = dt.isoformat()
+
+            # Check if there will be snow
+            if dt_str in snow_data and snow_data[dt_str] > 0:
+                recent_snow = True
+
+            # Check for precipitation + cold temperature (implicit snow)
+            if dt_str in temperature_data:
+                temp = temperature_data[dt_str]
+                if temp < SNOW_TEMP_THRESHOLD:
+                    if dt_str in precipitation_data and precipitation_data[dt_str] > 0:
+                        recent_snow = True
+
+        # If no snow predicted, panels will be clear
+        if not recent_snow:
+            return False
+
+        # Snow predicted - check if it will have melted by target time
+        # Calculate cumulative radiation from snow event to target time
+        cumulative_radiation_hours = 0.0
+
+        for hour_offset in range(-lookback_hours, 1):
+            dt = target_dt + timedelta(hours=hour_offset)
+            dt_str = dt.isoformat()
+
+            # Check temperature - snow doesn't melt if too cold
+            if dt_str in temperature_data:
+                temp = temperature_data[dt_str]
+                if temp < SNOW_TEMP_THRESHOLD:
+                    # Reset counter when cold
+                    cumulative_radiation_hours = 0.0
+                    continue
+
+            # Get radiation from PVGIS data
+            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+
+            # Estimate radiation (W/m²) from power
+            estimated_radiation = (
+                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                if array_config[CONF_MODULES_POWER] > 0
+                else 0
+            )
+
+            # Count hours with significant radiation
+            if estimated_radiation > SNOW_MELT_RADIATION_THRESHOLD:
+                cumulative_radiation_hours += 1.0
+
+        # Adjust melt threshold based on inclination
+        melt_hours_needed = SNOW_MELT_RADIATION_HOURS
+        if inclination > SNOW_SLIDE_INCLINATION:
+            angle_factor = (inclination - SNOW_SLIDE_INCLINATION) / 60.0
+            melt_hours_needed *= max(0.5, 1.0 - angle_factor)
+
+        # If enough radiation to melt snow, panels will be clear
+        if cumulative_radiation_hours >= melt_hours_needed:
+            return False
+
+        # Snow still predicted to be present
+        return True
+
     def set_snow_override(self, array_name: str, snow_covered: bool | None) -> None:
         """Set manual override for snow coverage on an array.
 
@@ -598,6 +699,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         cloud_coverage: dict[str, float],
         now: datetime,
         snow_covered: bool = False,
+        array_config: dict[str, Any] | None = None,
+        temperature_data: dict[str, float] | None = None,
+        precipitation_data: dict[str, float] | None = None,
+        snow_data: dict[str, float] | None = None,
     ) -> SolarArrayForecast:
         """Compute forecast for a single array."""
         forecast = SolarArrayForecast()
@@ -631,9 +736,29 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             cloud_factor = self.get_cloud_factor(dt, cloud_coverage)
             adjusted_power = clear_sky_power * cloud_factor
 
-            # Apply snow factor if array is snow covered
-            if snow_covered:
-                adjusted_power *= SNOW_FACTOR_COVERED
+            # Predict snow for this specific hour if weather data available
+            hour_snow_covered = snow_covered  # Default to current state
+            if (
+                array_config is not None
+                and temperature_data is not None
+                and precipitation_data is not None
+                and snow_data is not None
+                and hour_offset > 0  # Only predict for future hours
+            ):
+                hour_snow_covered = self._predict_snow_for_hour(
+                    array_config,
+                    pvgis_data,
+                    temperature_data,
+                    precipitation_data,
+                    snow_data,
+                    dt,
+                )
+
+            # Apply snow factor if snow is predicted for this hour
+            snow_factor = 1.0
+            if hour_snow_covered:
+                snow_factor = SNOW_FACTOR_COVERED
+                adjusted_power *= snow_factor
 
             # Energy in Wh for this hour
             ts_key = dt.isoformat()
@@ -653,6 +778,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     )
                     if cloud_factor < CLOUD_FACTOR_CLEAR
                     else 0.0,
+                    "snow_covered": hour_snow_covered,
                 }
             )
 

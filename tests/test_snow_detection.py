@@ -246,3 +246,58 @@ class TestSnowDetection:
         # Remove override
         coordinator.set_snow_override("Test Array", None)
         assert "Test Array" not in coordinator.data.snow_overrides
+
+    def test_forecast_snow_prediction(self, mock_pvgis_data) -> None:
+        """Test that snow is predicted per-hour in the forecast."""
+        coordinator = PVGISSolarForecastCoordinator.__new__(
+            PVGISSolarForecastCoordinator
+        )
+
+        now = datetime(2024, 1, 15, 12, 0, tzinfo=UTC)
+        cloud_coverage = {}
+
+        # Setup weather data with snow predicted in 2 hours
+        temperature_data = {}
+        precipitation_data = {}
+        snow_data = {}
+
+        # Snow predicted in 2 hours
+        future_snow_time = now + timedelta(hours=2)
+        snow_data[future_snow_time.isoformat()] = 5.0  # 5mm of snow
+
+        array_config = {
+            "name": "Test Array",
+            CONF_DECLINATION: 35,
+            CONF_AZIMUTH: 0,
+            CONF_MODULES_POWER: 5.0,
+        }
+
+        # Compute forecast with per-hour snow prediction
+        forecast = coordinator.compute_forecast(
+            mock_pvgis_data,
+            cloud_coverage,
+            now,
+            snow_covered=False,
+            array_config=array_config,
+            temperature_data=temperature_data,
+            precipitation_data=precipitation_data,
+            snow_data=snow_data,
+        )
+
+        # Check that detailed forecast includes snow_covered field
+        assert len(forecast.detailed_forecast) > 0
+        first_hour = forecast.detailed_forecast[0]
+        assert "snow_covered" in first_hour
+
+        # First hour (now) should not have snow
+        assert first_hour["snow_covered"] is False
+
+        # Future hours should have snow predicted
+        # Find the hour with snow
+        snow_found = False
+        for i, hour_data in enumerate(forecast.detailed_forecast):
+            if i > 0 and "snow_covered" in hour_data and hour_data["snow_covered"]:
+                snow_found = True
+                break
+
+        assert snow_found, "Snow should be predicted in future hours"
