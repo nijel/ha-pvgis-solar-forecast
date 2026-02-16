@@ -252,7 +252,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             result.historical_snapshots = self._cleanup_historical_snapshots(
                 self.data.historical_snapshots, now
             )
-        
+
         # Add current forecast as a new snapshot
         result.historical_snapshots.append(
             ForecastSnapshot(timestamp=now, wh_hours=total_wh.copy())
@@ -569,11 +569,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         snapshots: list[ForecastSnapshot], now: datetime
     ) -> list[ForecastSnapshot]:
         """Clean up historical snapshots older than HISTORICAL_DAYS.
-        
+
         Args:
             snapshots: List of historical forecast snapshots.
             now: Current datetime.
-            
+
         Returns:
             Filtered list of snapshots within the retention period.
         """
