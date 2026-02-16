@@ -194,9 +194,10 @@ async def async_setup_entry(
             key="clear_sky_energy_today",
             translation_key="clear_sky_energy_today",
             icon="mdi:solar-power-variant",
-            unit=UnitOfEnergy.KILO_WATT_HOUR,
+            unit=UnitOfEnergy.WATT_HOUR,
             device_class=SensorDeviceClass.ENERGY,
-            display_precision=2,
+            suggested_unit=UnitOfEnergy.KILO_WATT_HOUR,
+            display_precision=1,
         )
     )
 
@@ -223,9 +224,10 @@ async def async_setup_entry(
                     key=f"clear_sky_energy_today_{array_name}",
                     translation_key="clear_sky_energy_today",
                     icon="mdi:solar-power-variant",
-                    unit=UnitOfEnergy.KILO_WATT_HOUR,
+                    unit=UnitOfEnergy.WATT_HOUR,
                     device_class=SensorDeviceClass.ENERGY,
-                    display_precision=2,
+                    suggested_unit=UnitOfEnergy.KILO_WATT_HOUR,
+                    display_precision=1,
                     array_name=array_name,
                 )
             )
@@ -328,6 +330,7 @@ class PVGISDiagnosticSensor(
         icon: str | None = None,
         unit: str | None = None,
         device_class: SensorDeviceClass | None = None,
+        suggested_unit: str | None = None,
         display_precision: int | None = None,
         array_name: str | None = None,
     ) -> None:
@@ -341,6 +344,8 @@ class PVGISDiagnosticSensor(
         self._attr_native_unit_of_measurement = unit
         if device_class is not None:
             self._attr_device_class = device_class
+        if suggested_unit is not None:
+            self._attr_suggested_unit_of_measurement = suggested_unit
         if display_precision is not None:
             self._attr_suggested_display_precision = display_precision
         self.entity_id = f"{SENSOR_DOMAIN}.pvgis_{key}"
