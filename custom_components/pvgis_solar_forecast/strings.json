@@ -131,6 +131,14 @@
       "peak_power_tomorrow": {
         "name": "Peak power - tomorrow"
       }
+    },
+    "button": {
+      "mark_as_snow_covered": {
+        "name": "Mark as snow covered"
+      },
+      "mark_as_snow_clear": {
+        "name": "Mark as snow clear"
+      }
     }
   },
   "selector": {

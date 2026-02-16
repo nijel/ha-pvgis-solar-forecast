@@ -238,6 +238,16 @@ async def async_setup_entry(
                     array_name=array_name,
                 )
             )
+            entities.append(
+                PVGISDiagnosticSensor(
+                    entry_id=entry.entry_id,
+                    coordinator=coordinator,
+                    key=f"snow_covered_{array_name}",
+                    name=f"Snow covered - {array_name}",
+                    icon="mdi:snowflake",
+                    array_name=array_name,
+                )
+            )
 
     async_add_entities(entities)
 
@@ -382,11 +392,13 @@ class PVGISDiagnosticSensor(
             array_forecast = data.arrays.get(self._array_name)
             if array_forecast is None:
                 return None
-            base_key = self._key.rsplit(f"_{self._array_name}", 1)[0]
+            base_key = self._key.replace(f"_{self._array_name}", "")
             if base_key == "clear_sky_power_now":
                 return array_forecast.clear_sky_power_now
             if base_key == "clear_sky_energy_today":
                 return array_forecast.clear_sky_energy_today
+            if base_key == "snow_covered":
+                return array_forecast.snow_covered
             return None
 
         if self._key == "cloud_coverage":

@@ -131,6 +131,14 @@
       "peak_power_tomorrow": {
         "name": "Špičkový výkon - zítra"
       }
+    },
+    "button": {
+      "mark_as_snow_covered": {
+        "name": "Označit jako pokryté sněhem"
+      },
+      "mark_as_snow_clear": {
+        "name": "Označit jako bez sněhu"
+      }
     }
   },
   "selector": {
