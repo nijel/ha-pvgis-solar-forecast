@@ -38,13 +38,15 @@ from .const import (
     DEFAULT_MOUNTING_PLACE,
     DEFAULT_PV_TECH,
     DOMAIN,
+    MOUNTING_PLACE_OPTIONS,
+    PV_TECH_OPTIONS,
 )
 
 WEATHER_ENTITY_SELECTOR = EntitySelector(EntitySelectorConfig(domain="weather"))
 
 MOUNTING_PLACE_SELECTOR = SelectSelector(
     SelectSelectorConfig(
-        options=["free", "building"],
+        options=MOUNTING_PLACE_OPTIONS,
         mode=SelectSelectorMode.DROPDOWN,
         translation_key="mounting_place",
     )
@@ -52,7 +54,7 @@ MOUNTING_PLACE_SELECTOR = SelectSelector(
 
 PV_TECH_SELECTOR = SelectSelector(
     SelectSelectorConfig(
-        options=["crystSi", "CIS", "CdTe", "Unknown"],
+        options=PV_TECH_OPTIONS,
         mode=SelectSelectorMode.DROPDOWN,
         translation_key="pv_tech",
     )

@@ -93,7 +93,7 @@ async def test_full_config_flow(
                 CONF_MODULES_POWER: 5000,
                 CONF_LOSS: 14.0,
                 CONF_MOUNTING_PLACE: "free",
-                CONF_PV_TECH: "crystSi",
+                CONF_PV_TECH: "crystsi",
                 "add_another": False,
             },
         )
@@ -137,7 +137,7 @@ async def test_multiple_arrays(
             CONF_MODULES_POWER: 5000,
             CONF_LOSS: 14.0,
             CONF_MOUNTING_PLACE: "free",
-            CONF_PV_TECH: "crystSi",
+            CONF_PV_TECH: "crystsi",
             "add_another": True,
         },
     )
@@ -159,7 +159,7 @@ async def test_multiple_arrays(
                 CONF_MODULES_POWER: 3000,
                 CONF_LOSS: 14.0,
                 CONF_MOUNTING_PLACE: "building",
-                CONF_PV_TECH: "CIS",
+                CONF_PV_TECH: "cis",
                 "add_another": False,
             },
         )

@@ -74,7 +74,7 @@ MOCK_CONFIG_OPTIONS = {
             CONF_MODULES_POWER: 5000,
             CONF_LOSS: 14.0,
             CONF_MOUNTING_PLACE: "free",
-            CONF_PV_TECH: "crystSi",
+            CONF_PV_TECH: "crystsi",
         }
     ],
 }

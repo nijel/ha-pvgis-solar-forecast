@@ -70,6 +70,12 @@
       },
       "power_production_now": {
         "name": "Estimated power production - now"
+      },
+      "peak_power_today": {
+        "name": "Peak power - today"
+      },
+      "peak_power_tomorrow": {
+        "name": "Peak power - tomorrow"
       }
     }
   },
@@ -82,10 +88,10 @@
     },
     "pv_tech": {
       "options": {
-        "crystSi": "Crystalline silicon",
-        "CIS": "CIS",
-        "CdTe": "CdTe",
-        "Unknown": "Unknown"
+        "crystsi": "Crystalline silicon",
+        "cis": "CIS",
+        "cdte": "CdTe",
+        "unknown": "Unknown"
       }
     }
   }

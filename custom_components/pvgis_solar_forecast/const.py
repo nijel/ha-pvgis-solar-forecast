@@ -24,7 +24,20 @@ DEFAULT_DECLINATION = 35
 DEFAULT_AZIMUTH = 0
 DEFAULT_LOSS = 14.0
 DEFAULT_MOUNTING_PLACE = "free"
-DEFAULT_PV_TECH = "crystSi"
+DEFAULT_PV_TECH = "crystsi"
+
+# PV tech option keys (lowercase for HA translation validation)
+# and their corresponding PVGIS API values
+PV_TECH_OPTIONS = ["crystsi", "cis", "cdte", "unknown"]
+PV_TECH_API_MAP = {
+    "crystsi": "crystSi",
+    "cis": "CIS",
+    "cdte": "CdTe",
+    "unknown": "Unknown",
+}
+
+# Mounting place options
+MOUNTING_PLACE_OPTIONS = ["free", "building"]
 
 # Cloud coverage to radiation factor mapping
 # Maps cloud coverage percentage to a multiplicative factor for clear-sky radiation

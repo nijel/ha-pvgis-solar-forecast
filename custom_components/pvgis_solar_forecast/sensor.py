@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfPower
+from homeassistant.const import EntityCategory, UnitOfEnergy, UnitOfPower
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -103,6 +103,20 @@ SENSORS: tuple[PVGISSolarForecastSensorEntityDescription, ...] = (
         suggested_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=1,
     ),
+    PVGISSolarForecastSensorEntityDescription(
+        key="peak_power_today",
+        translation_key="peak_power_today",
+        state=lambda f: f.peak_power_today,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+    ),
+    PVGISSolarForecastSensorEntityDescription(
+        key="peak_power_tomorrow",
+        translation_key="peak_power_tomorrow",
+        state=lambda f: f.peak_power_tomorrow,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+    ),
 )
 
 
@@ -115,7 +129,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     # Create sensors for the total forecast
-    entities: list[PVGISSolarForecastSensorEntity] = [
+    entities: list[PVGISSolarForecastSensorEntity | PVGISDiagnosticSensor] = [
         PVGISSolarForecastSensorEntity(
             entry_id=entry.entry_id,
             coordinator=coordinator,
@@ -137,6 +151,27 @@ async def async_setup_entry(
                 )
                 for description in SENSORS
             )
+
+    # Add diagnostic sensors
+    entities.append(
+        PVGISDiagnosticSensor(
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            key="cloud_coverage",
+            name="Cloud coverage",
+            icon="mdi:weather-cloudy",
+            unit="%",
+        )
+    )
+    entities.append(
+        PVGISDiagnosticSensor(
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            key="weather_entity_available",
+            name="Weather entity available",
+            icon="mdi:weather-partly-cloudy",
+        )
+    )
 
     async_add_entities(entities)
 
@@ -201,7 +236,10 @@ class PVGISSolarForecastSensorEntity(
         if forecast is None:
             return None
 
-        return {"wh_hours": forecast.wh_hours}
+        return {
+            "wh_hours": forecast.wh_hours,
+            "detailedForecast": forecast.detailed_forecast,
+        }
 
     def _get_forecast(self) -> SolarArrayForecast | None:
         """Get the forecast data for this sensor's array."""
@@ -213,3 +251,54 @@ class PVGISSolarForecastSensorEntity(
             return data.arrays.get(self._array_name)
 
         return data.total
+
+
+class PVGISDiagnosticSensor(
+    CoordinatorEntity[PVGISSolarForecastCoordinator], SensorEntity
+):
+    """Diagnostic sensor for PVGIS Solar Forecast."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        *,
+        entry_id: str,
+        coordinator: PVGISSolarForecastCoordinator,
+        key: str,
+        name: str,
+        icon: str | None = None,
+        unit: str | None = None,
+    ) -> None:
+        """Initialize diagnostic sensor."""
+        super().__init__(coordinator=coordinator)
+        self._key = key
+        self._attr_unique_id = f"{entry_id}_{key}"
+        self._attr_name = name
+        self._attr_icon = icon
+        self._attr_native_unit_of_measurement = unit
+        self.entity_id = f"{SENSOR_DOMAIN}.pvgis_{key}"
+
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, entry_id)},
+            manufacturer="PVGIS",
+            model="Solar Forecast",
+            name="Solar production forecast",
+            configuration_url="https://re.jrc.ec.europa.eu/pvg_tools/en/",
+        )
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the state of the sensor."""
+        data: SolarForecastData | None = self.coordinator.data
+        if data is None:
+            return None
+
+        if self._key == "cloud_coverage":
+            return data.cloud_coverage_used
+        if self._key == "weather_entity_available":
+            return data.weather_entity_available
+
+        return None
