@@ -39,6 +39,8 @@ Geographical Information System) radiation data combined with weather forecasts.
 1. Search for "PVGIS Solar Forecast"
 1. Configure your location (defaults to your Home Assistant location)
 1. Optionally select a weather forecast entity for cloud coverage data
+   - **Primary weather entity**: Used for short to medium term cloud coverage forecast
+   - **Secondary weather entity** (optional): Used for long-term forecast when the primary entity only provides 24-48 hours of data
 1. Add one or more solar arrays with their specifications:
    - **Declination**: Panel tilt angle (0° horizontal, 90° vertical)
    - **Azimuth**: Panel orientation (0° = South, 90° = West, -90° = East)
@@ -78,7 +80,9 @@ your energy configuration.
 1. **Weather Adjustment**: If a weather entity is configured, cloud coverage
    forecasts are used to adjust the clear-sky estimates. The adjustment uses a
    linear mapping where 0% clouds = 100% of clear-sky production and 100%
-   clouds = 20% of clear-sky production.
+   clouds = 20% of clear-sky production. If both primary and secondary weather
+   entities are configured, the primary forecast is used when available, and
+   the secondary provides extended forecast data beyond the primary's horizon.
 
 1. **Forecast Generation**: The integration combines PVGIS data with weather
-   forecasts to produce hourly production estimates for the next 48 hours.
+   forecasts to produce hourly production estimates for the next 7 days.
