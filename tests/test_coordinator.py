@@ -292,14 +292,14 @@ class TestTodayForecastEveningInstall:
 
     def test_today_forecast_includes_all_hours(self) -> None:
         """Test that energy_production_today includes past hours of today.
-        
+
         This validates the fix for the issue where installing in the evening
         showed zero for today's forecast because it only counted future hours.
         """
         # Simulate installing at 8 PM (20:00)
         now = datetime(2024, 1, 1, 20, 0, tzinfo=UTC)
         today = now.date()
-        
+
         # Create wh_hours with production throughout the day (6 AM to 6 PM)
         # Even though it's 8 PM, the forecast should include all hours from 00:00
         wh_hours = {}
@@ -307,43 +307,48 @@ class TestTodayForecastEveningInstall:
             dt = datetime(today.year, today.month, today.day, h, tzinfo=UTC)
             # Production from 6 AM to 6 PM (13 hours)
             wh_hours[dt.isoformat()] = 100.0 if 6 <= h <= 18 else 0.0
-        
+
         coordinator = PVGISSolarForecastCoordinator.__new__(
             PVGISSolarForecastCoordinator
         )
         forecast = coordinator.compute_total_forecast(wh_hours, now)
-        
+
         # energy_production_today should include ALL hours (including past hours)
         assert forecast.energy_production_today == 1300.0  # 13 hours * 100
-        
+
         # energy_production_today_remaining should only include future hours
         # At 8 PM, all production hours (6 AM-6 PM) have passed, so remaining = 0
         assert forecast.energy_production_today_remaining == 0.0
-    
-    def test_today_forecast_with_compute_forecast(self, mock_pvgis_data: PVGISData) -> None:
+
+    def test_today_forecast_with_compute_forecast(
+        self, mock_pvgis_data: PVGISData
+    ) -> None:
         """Test compute_forecast includes all hours from midnight when called in evening."""
         # Simulate calling compute_forecast at 8 PM (20:00)
         now = datetime(2024, 1, 1, 20, 0, tzinfo=UTC)
-        
+
         coordinator = PVGISSolarForecastCoordinator.__new__(
             PVGISSolarForecastCoordinator
         )
-        
+
         # Compute forecast with clear sky
         forecast = coordinator.compute_forecast(mock_pvgis_data, {}, now)
-        
+
         # Should have 168 hours in forecast (7 days * 24 hours)
         assert len(forecast.wh_hours) == 168
-        
+
         # The wh_hours should start from midnight (00:00), not from current hour (20:00)
         sorted_hours = sorted(forecast.wh_hours.keys())
         first_hour_dt = datetime.fromisoformat(sorted_hours[0])
         assert first_hour_dt.hour == 0  # Should start from midnight
         assert first_hour_dt.date() == now.date()  # Should be today
-        
+
         # energy_production_today should include all hours from midnight to 23:59
         # even though it's 8 PM and some hours have passed
         assert forecast.energy_production_today > 0
-        
+
         # energy_production_today_remaining should be less than or equal to today_total
-        assert forecast.energy_production_today_remaining <= forecast.energy_production_today
+        assert (
+            forecast.energy_production_today_remaining
+            <= forecast.energy_production_today
+        )

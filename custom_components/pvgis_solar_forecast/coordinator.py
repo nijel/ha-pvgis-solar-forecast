@@ -986,7 +986,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         detailed: list[dict[str, Any]] = []
 
         sorted_items = sorted(total_wh.items())
-        for i, (ts, wh) in enumerate(sorted_items):
+        for ts, wh in sorted_items:
             dt = datetime.fromisoformat(ts)
 
             detailed.append(
