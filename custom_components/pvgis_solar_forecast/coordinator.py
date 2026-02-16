@@ -248,7 +248,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         result.total = self.compute_total_forecast(total_wh, now)
 
         # Store historical forecast snapshot and clean up old ones
-        if self.data and self.data.historical_snapshots:
+        if self.data:
             result.historical_snapshots = self._cleanup_historical_snapshots(
                 self.data.historical_snapshots, now
             )

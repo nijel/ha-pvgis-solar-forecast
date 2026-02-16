@@ -60,30 +60,32 @@ async def test_get_solar_forecast_with_historical_data(
 
     # Get the coordinator and add a historical snapshot
     coordinator = entry.runtime_data
-    now = datetime.now().astimezone()
+    # Use a fixed datetime for reliable testing
+    from datetime import UTC
+    now = datetime(2024, 7, 15, 12, 0, tzinfo=UTC)
     past_time = now - timedelta(hours=2)
     past_hour = past_time.replace(minute=0, second=0, microsecond=0)
-    
+
     # Create a historical snapshot with past forecast data
     historical_wh_hours = {
         (past_hour - timedelta(hours=1)).isoformat(): 1000.0,
         past_hour.isoformat(): 1500.0,
         (past_hour + timedelta(hours=1)).isoformat(): 2000.0,
     }
-    
+
     if coordinator.data:
         coordinator.data.historical_snapshots.append(
             ForecastSnapshot(timestamp=past_time, wh_hours=historical_wh_hours)
         )
-    
+
     result = await async_get_solar_forecast(hass, entry.entry_id)
     assert result is not None
     assert "wh_hours" in result
-    
+
     # Verify that past forecast data is included
     wh_hours = result["wh_hours"]
     assert len(wh_hours) > 0
-    
+
     # The historical data for times before now should be included
     for ts_str in historical_wh_hours:
         forecast_time = datetime.fromisoformat(ts_str)

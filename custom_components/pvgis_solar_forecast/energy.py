@@ -40,12 +40,15 @@ async def async_get_solar_forecast(
     for snapshot in data.historical_snapshots:
         # Only include forecasts that are now in the past
         for ts_str, wh_value in snapshot.wh_hours.items():
+            # Skip if already covered by current forecast
+            if ts_str in wh_hours:
+                continue
+
             forecast_time = datetime.fromisoformat(ts_str)
             forecast_hour = forecast_time.replace(minute=0, second=0, microsecond=0)
 
-            # If this forecast time is in the past (relative to now) and
-            # wasn't already covered by the current forecast, include it
-            if forecast_hour < now_hour and ts_str not in wh_hours:
+            # If this forecast time is in the past (relative to now), include it
+            if forecast_hour < now_hour:
                 wh_hours[ts_str] = wh_value
 
     return {"wh_hours": wh_hours}
