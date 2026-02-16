@@ -138,13 +138,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         self._longitude = entry.data[CONF_LONGITUDE]
         self._arrays_config: list[dict[str, Any]] = entry.options.get(CONF_ARRAYS, [])
         self._weather_entity: str = entry.options.get(CONF_WEATHER_ENTITY, "")
-        self._weather_entity_secondary: str = entry.options.get(CONF_WEATHER_ENTITY_SECONDARY, "")
+        self._weather_entity_secondary: str = entry.options.get(
+            CONF_WEATHER_ENTITY_SECONDARY, ""
+        )
 
     def update_config(self, entry: PVGISSolarForecastConfigEntry) -> None:
         """Update configuration from entry options (after reconfiguration)."""
         self._arrays_config = entry.options.get(CONF_ARRAYS, [])
         self._weather_entity = entry.options.get(CONF_WEATHER_ENTITY, "")
-        self._weather_entity_secondary = entry.options.get(CONF_WEATHER_ENTITY_SECONDARY, "")
+        self._weather_entity_secondary = entry.options.get(
+            CONF_WEATHER_ENTITY_SECONDARY, ""
+        )
         # Reset cached PVGIS data so arrays are re-fetched with new config
         self._arrays_data = {}
 
@@ -432,7 +436,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             secondary_forecast = await self._async_get_cloud_coverage_from_entity(
                 self._weather_entity_secondary
             )
-            
+
             # Merge: add timestamps from secondary that are not in primary
             for ts, coverage in secondary_forecast.items():
                 if ts not in forecast_data:

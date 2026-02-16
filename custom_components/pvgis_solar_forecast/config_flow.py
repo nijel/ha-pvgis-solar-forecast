@@ -143,7 +143,9 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
             self._latitude = user_input[CONF_LATITUDE]
             self._longitude = user_input[CONF_LONGITUDE]
             self._weather_entity = user_input.get(CONF_WEATHER_ENTITY, "")
-            self._weather_entity_secondary = user_input.get(CONF_WEATHER_ENTITY_SECONDARY, "")
+            self._weather_entity_secondary = user_input.get(
+                CONF_WEATHER_ENTITY_SECONDARY, ""
+            )
             return await self.async_step_array()
 
         return self.async_show_form(
@@ -226,7 +228,9 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
         """Manage the options - main menu."""
         if user_input is not None:
             self._weather_entity = user_input.get(CONF_WEATHER_ENTITY, "")
-            self._weather_entity_secondary = user_input.get(CONF_WEATHER_ENTITY_SECONDARY, "")
+            self._weather_entity_secondary = user_input.get(
+                CONF_WEATHER_ENTITY_SECONDARY, ""
+            )
             # Start editing arrays from the beginning
             self._arrays = []
             existing_arrays = self.config_entry.options.get(CONF_ARRAYS, [])
@@ -236,7 +240,9 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
             return await self.async_step_add_array()
 
         weather_entity = self.config_entry.options.get(CONF_WEATHER_ENTITY, "")
-        weather_entity_secondary = self.config_entry.options.get(CONF_WEATHER_ENTITY_SECONDARY, "")
+        weather_entity_secondary = self.config_entry.options.get(
+            CONF_WEATHER_ENTITY_SECONDARY, ""
+        )
 
         return self.async_show_form(
             step_id="init",
