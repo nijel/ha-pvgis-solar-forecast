@@ -221,6 +221,135 @@ class TestHistoricalSnapshots:
         # Should keep all snapshots since they're all recent
         assert len(cleaned) == original_count
 
+    def test_get_historical_cloud_coverage(self, mock_pvgis_data: PVGISData) -> None:
+        """Test retrieving historical cloud coverage from snapshots."""
+        now = datetime(2024, 7, 15, 14, 0, tzinfo=UTC)  # 2 PM
+
+        # Create snapshots with different cloud coverage for different times
+        # Snapshot 1: from 10 AM (4 hours ago) - had 80% clouds at 10 AM
+        snapshot1_time = now - timedelta(hours=4)
+        snapshot1 = ForecastSnapshot(
+            timestamp=snapshot1_time,
+            wh_hours={},
+            cloud_coverage={
+                (now - timedelta(hours=4)).isoformat(): 80.0,  # 10 AM had 80% clouds
+                (now - timedelta(hours=3)).isoformat(): 70.0,  # 11 AM had 70% clouds
+            },
+        )
+
+        # Snapshot 2: from 12 PM (2 hours ago) - had 50% clouds at 12 PM
+        snapshot2_time = now - timedelta(hours=2)
+        snapshot2 = ForecastSnapshot(
+            timestamp=snapshot2_time,
+            wh_hours={},
+            cloud_coverage={
+                (now - timedelta(hours=2)).isoformat(): 50.0,  # 12 PM had 50% clouds
+                (now - timedelta(hours=1)).isoformat(): 40.0,  # 1 PM had 40% clouds
+            },
+        )
+
+        # Current snapshot: now (2 PM) - currently clear (0% clouds)
+        current_snapshot = ForecastSnapshot(
+            timestamp=now,
+            wh_hours={},
+            cloud_coverage={
+                now.isoformat(): 0.0,  # Current: clear sky
+            },
+        )
+
+        snapshots = [snapshot1, snapshot2, current_snapshot]
+
+        coordinator = PVGISSolarForecastCoordinator.__new__(
+            PVGISSolarForecastCoordinator
+        )
+
+        # Test: Get historical cloud coverage for 10 AM (past hour)
+        dt_10am = now - timedelta(hours=4)
+        historical_cloud_10am = coordinator.get_historical_cloud_coverage(
+            dt_10am, snapshots
+        )
+        assert historical_cloud_10am is not None
+        assert dt_10am.isoformat() in historical_cloud_10am
+        assert historical_cloud_10am[dt_10am.isoformat()] == 80.0
+
+        # Test: Get historical cloud coverage for 12 PM (past hour)
+        dt_12pm = now - timedelta(hours=2)
+        historical_cloud_12pm = coordinator.get_historical_cloud_coverage(
+            dt_12pm, snapshots
+        )
+        assert historical_cloud_12pm is not None
+        assert dt_12pm.isoformat() in historical_cloud_12pm
+        assert historical_cloud_12pm[dt_12pm.isoformat()] == 50.0
+
+        # Test: No historical data for future hour
+        dt_future = now + timedelta(hours=1)
+        historical_cloud_future = coordinator.get_historical_cloud_coverage(
+            dt_future, snapshots
+        )
+        # Should return None because no snapshot has data for future hour
+        assert historical_cloud_future is None
+
+    def test_compute_forecast_uses_historical_cloud_coverage(
+        self, mock_pvgis_data: PVGISData
+    ) -> None:
+        """Test that compute_forecast uses historical cloud coverage for past hours."""
+        # Scenario: Integration installed at 2 PM
+        # Morning (10 AM) was cloudy (80%), but now (2 PM) it's clear (0%)
+        # We want past hours to use historical cloud data, not current
+        now = datetime(2024, 1, 1, 14, 0, tzinfo=UTC)  # 2 PM
+
+        # Current weather: clear sky
+        current_cloud_coverage = {
+            (now + timedelta(hours=h)).isoformat(): 0.0 for h in range(-4, 24)
+        }
+
+        # Historical snapshot from 10 AM showing it was cloudy then
+        past_snapshot_time = now - timedelta(hours=4)  # 10 AM
+        historical_snapshots = [
+            ForecastSnapshot(
+                timestamp=past_snapshot_time,
+                wh_hours={},
+                cloud_coverage={
+                    (now - timedelta(hours=4)).isoformat(): 80.0,  # 10 AM: 80% clouds
+                    (now - timedelta(hours=3)).isoformat(): 70.0,  # 11 AM: 70% clouds
+                    (now - timedelta(hours=2)).isoformat(): 60.0,  # 12 PM: 60% clouds
+                    (now - timedelta(hours=1)).isoformat(): 50.0,  # 1 PM: 50% clouds
+                },
+            )
+        ]
+
+        coordinator = PVGISSolarForecastCoordinator.__new__(
+            PVGISSolarForecastCoordinator
+        )
+
+        # Compute forecast WITHOUT historical data (simulates old behavior)
+        forecast_without_history = coordinator.compute_forecast(
+            mock_pvgis_data, current_cloud_coverage, now, historical_snapshots=None
+        )
+
+        # Compute forecast WITH historical data (new behavior)
+        forecast_with_history = coordinator.compute_forecast(
+            mock_pvgis_data,
+            current_cloud_coverage,
+            now,
+            historical_snapshots=historical_snapshots,
+        )
+
+        # The forecast with historical data should have LESS energy for today
+        # because past hours use the historical cloudy conditions instead of current clear sky
+        assert (
+            forecast_with_history.energy_production_today
+            < forecast_without_history.energy_production_today
+        )
+
+        # The remaining energy (future hours) should be the same since both use current forecast
+        # Note: remaining includes current hour, so it's not exactly equal but should be close
+        ratio = (
+            forecast_with_history.energy_production_today_remaining
+            / forecast_without_history.energy_production_today_remaining
+        )
+        assert ratio == pytest.approx(1.0, rel=0.05)
+
 
 class TestSecondaryWeatherEntity:
     """Test secondary weather entity functionality."""
