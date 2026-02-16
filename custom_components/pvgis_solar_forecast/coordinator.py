@@ -11,6 +11,7 @@ from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -55,6 +56,10 @@ FORECAST_DAYS = 7
 
 # Number of days to keep historical forecasts
 HISTORICAL_DAYS = 7
+
+# Storage version for persisted forecast data
+STORAGE_VERSION = 1
+STORAGE_KEY = "pvgis_solar_forecast.last_forecast"
 
 
 @dataclass
@@ -141,6 +146,12 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         self._weather_entity_secondary: str = entry.options.get(
             CONF_WEATHER_ENTITY_SECONDARY, ""
         )
+        # Storage for persisting last forecast
+        self._store = Store(
+            hass,
+            STORAGE_VERSION,
+            f"{STORAGE_KEY}.{entry.entry_id}",
+        )
 
     def update_config(self, entry: PVGISSolarForecastConfigEntry) -> None:
         """Update configuration from entry options (after reconfiguration)."""
@@ -151,6 +162,72 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         )
         # Reset cached PVGIS data so arrays are re-fetched with new config
         self._arrays_data = {}
+
+    async def async_restore_last_forecast(self) -> SolarForecastData | None:
+        """Restore the last forecast from storage.
+
+        Returns:
+            The restored forecast data or None if not available or too old.
+        """
+        try:
+            stored_data = await self._store.async_load()
+            if not stored_data:
+                return None
+
+            # Check if the stored forecast is too old (more than 24 hours)
+            timestamp_str = stored_data.get("timestamp")
+            if not timestamp_str:
+                return None
+
+            timestamp = datetime.fromisoformat(timestamp_str)
+            now = datetime.now().astimezone()
+            age = now - timestamp
+
+            # Only use forecast if it's less than 24 hours old
+            if age > timedelta(hours=24):
+                LOGGER.debug("Stored forecast is too old (%s), not restoring", age)
+                return None
+
+            # Restore the forecast data
+            wh_hours = stored_data.get("wh_hours", {})
+            if not wh_hours:
+                return None
+
+            LOGGER.info(
+                "Restored forecast from %s ago with %d hourly values",
+                age,
+                len(wh_hours),
+            )
+
+            # Create a minimal SolarForecastData with the restored wh_hours
+            # This will be used as initial data until the first real update
+            result = SolarForecastData()
+            result.total = self.compute_total_forecast(wh_hours, now)
+            result.weather_entity_available = (
+                False  # Mark as unavailable since it's restored
+            )
+        except Exception as err:  # noqa: BLE001
+            LOGGER.debug("Failed to restore last forecast: %s", err)
+            return None
+        else:
+            return result
+
+    async def async_save_last_forecast(self, wh_hours: dict[str, float]) -> None:
+        """Save the last forecast to storage.
+
+        Args:
+            wh_hours: The hourly forecast data to save.
+        """
+        try:
+            now = datetime.now().astimezone()
+            await self._store.async_save(
+                {
+                    "timestamp": now.isoformat(),
+                    "wh_hours": wh_hours,
+                }
+            )
+        except Exception as err:  # noqa: BLE001
+            LOGGER.debug("Failed to save last forecast: %s", err)
 
     async def _async_update_data(self) -> SolarForecastData:
         """Fetch and compute solar forecast data."""
@@ -309,6 +386,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         result.historical_snapshots.append(
             ForecastSnapshot(timestamp=now, wh_hours=total_wh.copy())
         )
+
+        # Save the forecast to storage for restoration on next startup
+        if total_wh:
+            await self.async_save_last_forecast(total_wh)
 
         return result
 
