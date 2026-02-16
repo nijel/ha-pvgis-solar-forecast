@@ -59,6 +59,8 @@ class SolarForecastData:
     total: SolarArrayForecast | None = None
     cloud_coverage_used: float | None = None
     weather_entity_available: bool = True
+    clear_sky_power_now: float = 0.0
+    clear_sky_energy_today: float = 0.0
 
 
 @dataclass
@@ -103,6 +105,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         self._arrays_config: list[dict[str, Any]] = entry.options.get(CONF_ARRAYS, [])
         self._weather_entity: str = entry.options.get(CONF_WEATHER_ENTITY, "")
 
+    def update_config(self, entry: PVGISSolarForecastConfigEntry) -> None:
+        """Update configuration from entry options (after reconfiguration)."""
+        self._arrays_config = entry.options.get(CONF_ARRAYS, [])
+        self._weather_entity = entry.options.get(CONF_WEATHER_ENTITY, "")
+        # Reset cached PVGIS data so arrays are re-fetched with new config
+        self._arrays_data = {}
+
     async def _async_update_data(self) -> SolarForecastData:
         """Fetch and compute solar forecast data."""
         session = async_get_clientsession(self.hass)
@@ -132,7 +141,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                         session=session,
                         latitude=self._latitude,
                         longitude=self._longitude,
-                        peakpower=array_config[CONF_MODULES_POWER] / 1000,
+                        peakpower=array_config[CONF_MODULES_POWER],
                         loss=array_config.get(CONF_LOSS, DEFAULT_LOSS),
                         angle=array_config[CONF_DECLINATION],
                         aspect=array_config[CONF_AZIMUTH],
@@ -160,6 +169,8 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         result = SolarForecastData()
         result.weather_entity_available = weather_available
         total_wh: dict[str, float] = {}
+        total_clear_sky_now = 0.0
+        total_clear_sky_today = 0.0
 
         # Track current cloud coverage for diagnostics
         if cloud_coverage:
@@ -185,6 +196,18 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             for ts, wh in forecast.wh_hours.items():
                 total_wh[ts] = total_wh.get(ts, 0.0) + wh
 
+            # Accumulate clear-sky radiation diagnostics
+            total_clear_sky_now += array_data.pvgis_data.get_power(
+                now.month, now.day, now.hour
+            )
+            for h in range(24):
+                total_clear_sky_today += array_data.pvgis_data.get_power(
+                    now.month, now.day, h
+                )
+
+        result.clear_sky_power_now = round(total_clear_sky_now, 1)
+        result.clear_sky_energy_today = round(total_clear_sky_today, 1)
+
         # Compute total forecast
         result.total = self.compute_total_forecast(total_wh, now)
 
@@ -196,6 +219,9 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         Uses the weather.get_forecasts service to get hourly forecast data,
         which is the modern HA approach (the forecast attribute was deprecated).
 
+        Gracefully handles the case where the weather entity is not yet
+        available (e.g., during HA startup), returning clear-sky defaults.
+
         Returns:
             Tuple of (cloud_coverage_dict, weather_entity_available).
             Cloud coverage dict maps ISO timestamps to coverage percentage (0-100).
@@ -206,7 +232,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         state = self.hass.states.get(self._weather_entity)
         if state is None:
-            LOGGER.warning("Weather entity %s not found", self._weather_entity)
+            LOGGER.debug(
+                "Weather entity %s not available yet, using clear-sky forecast",
+                self._weather_entity,
+            )
             return {}, False
 
         forecast_data: dict[str, float] = {}

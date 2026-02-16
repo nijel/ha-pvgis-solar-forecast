@@ -172,6 +172,26 @@ async def async_setup_entry(
             icon="mdi:weather-partly-cloudy",
         )
     )
+    entities.append(
+        PVGISDiagnosticSensor(
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            key="clear_sky_power_now",
+            name="Clear sky power now",
+            icon="mdi:white-balance-sunny",
+            unit="W",
+        )
+    )
+    entities.append(
+        PVGISDiagnosticSensor(
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            key="clear_sky_energy_today",
+            name="Clear sky energy today",
+            icon="mdi:solar-power-variant",
+            unit="Wh",
+        )
+    )
 
     async_add_entities(entities)
 
@@ -300,5 +320,9 @@ class PVGISDiagnosticSensor(
             return data.cloud_coverage_used
         if self._key == "weather_entity_available":
             return data.weather_entity_available
+        if self._key == "clear_sky_power_now":
+            return data.clear_sky_power_now
+        if self._key == "clear_sky_energy_today":
+            return data.clear_sky_energy_today
 
         return None

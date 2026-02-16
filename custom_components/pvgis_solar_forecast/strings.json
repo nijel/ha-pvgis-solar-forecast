@@ -21,13 +21,14 @@
           "name": "Array name",
           "declination": "Declination (0 = Horizontal, 90 = Vertical)",
           "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
-          "modules_power": "Total Watt peak power of solar modules",
+          "modules_power": "Peak power of solar modules (kWp)",
           "loss": "System losses (%)",
           "mounting_place": "Mounting type",
           "pv_tech": "PV technology",
           "add_another": "Add another array"
         },
         "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
           "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
         }
       }
@@ -39,8 +40,46 @@
   "options": {
     "step": {
       "init": {
+        "title": "PVGIS Solar Forecast Options",
+        "description": "Configure the weather source. After saving, you can edit each solar array.",
         "data": {
           "weather_entity": "Weather forecast entity"
+        }
+      },
+      "edit_array": {
+        "title": "Edit Solar Array: {array_name}",
+        "description": "Modify the configuration for this solar array, or remove it.",
+        "data": {
+          "name": "Array name",
+          "declination": "Declination (0 = Horizontal, 90 = Vertical)",
+          "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
+          "modules_power": "Peak power of solar modules (kWp)",
+          "loss": "System losses (%)",
+          "mounting_place": "Mounting type",
+          "pv_tech": "PV technology",
+          "remove_array": "Remove this array"
+        },
+        "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
+        }
+      },
+      "add_array": {
+        "title": "Add Solar Array",
+        "description": "Fill in the details and check 'Add another array' to add a new array. Uncheck it to finish without adding.",
+        "data": {
+          "name": "Array name",
+          "declination": "Declination (0 = Horizontal, 90 = Vertical)",
+          "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
+          "modules_power": "Peak power of solar modules (kWp)",
+          "loss": "System losses (%)",
+          "mounting_place": "Mounting type",
+          "pv_tech": "PV technology",
+          "add_another": "Add another array"
+        },
+        "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
         }
       }
     }

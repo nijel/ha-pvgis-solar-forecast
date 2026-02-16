@@ -71,7 +71,7 @@ MOCK_CONFIG_OPTIONS = {
             "name": "South Roof",
             CONF_DECLINATION: 35,
             CONF_AZIMUTH: 0,
-            CONF_MODULES_POWER: 5000,
+            CONF_MODULES_POWER: 5.0,
             CONF_LOSS: 14.0,
             CONF_MOUNTING_PLACE: "free",
             CONF_PV_TECH: "crystsi",

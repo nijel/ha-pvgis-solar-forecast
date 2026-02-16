@@ -143,3 +143,9 @@ async def test_diagnostic_sensors_created(
 
     state = hass.states.get("sensor.pvgis_weather_entity_available")
     assert state is not None
+
+    state = hass.states.get("sensor.pvgis_clear_sky_power_now")
+    assert state is not None
+
+    state = hass.states.get("sensor.pvgis_clear_sky_energy_today")
+    assert state is not None
