@@ -65,6 +65,18 @@ SENSORS: tuple[PVGISSolarForecastSensorEntityDescription, ...] = (
         suggested_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         suggested_display_precision=1,
     ),
+    *(
+        PVGISSolarForecastSensorEntityDescription(
+            key=f"energy_production_day_{day}",
+            translation_key=f"energy_production_day_{day}",
+            state=lambda f, d=day: f.energy_production_days.get(d, 0.0),
+            device_class=SensorDeviceClass.ENERGY,
+            native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+            suggested_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision=1,
+        )
+        for day in range(2, 7)
+    ),
     PVGISSolarForecastSensorEntityDescription(
         key="power_highest_peak_time_today",
         translation_key="power_highest_peak_time_today",
@@ -152,7 +164,7 @@ async def async_setup_entry(
                 for description in SENSORS
             )
 
-    # Add diagnostic sensors
+    # Add diagnostic sensors (total)
     entities.append(
         PVGISDiagnosticSensor(
             entry_id=entry.entry_id,
@@ -179,7 +191,9 @@ async def async_setup_entry(
             key="clear_sky_power_now",
             name="Clear sky power now",
             icon="mdi:white-balance-sunny",
-            unit="W",
+            unit=UnitOfPower.WATT,
+            device_class=SensorDeviceClass.POWER,
+            display_precision=0,
         )
     )
     entities.append(
@@ -189,9 +203,41 @@ async def async_setup_entry(
             key="clear_sky_energy_today",
             name="Clear sky energy today",
             icon="mdi:solar-power-variant",
-            unit="Wh",
+            unit=UnitOfEnergy.KILO_WATT_HOUR,
+            device_class=SensorDeviceClass.ENERGY,
+            display_precision=2,
         )
     )
+
+    # Add per-array diagnostic sensors
+    if coordinator.data and coordinator.data.arrays:
+        for array_name in coordinator.data.arrays:
+            entities.append(
+                PVGISDiagnosticSensor(
+                    entry_id=entry.entry_id,
+                    coordinator=coordinator,
+                    key=f"clear_sky_power_now_{array_name}",
+                    name=f"Clear sky power now - {array_name}",
+                    icon="mdi:white-balance-sunny",
+                    unit=UnitOfPower.WATT,
+                    device_class=SensorDeviceClass.POWER,
+                    display_precision=0,
+                    array_name=array_name,
+                )
+            )
+            entities.append(
+                PVGISDiagnosticSensor(
+                    entry_id=entry.entry_id,
+                    coordinator=coordinator,
+                    key=f"clear_sky_energy_today_{array_name}",
+                    name=f"Clear sky energy today - {array_name}",
+                    icon="mdi:solar-power-variant",
+                    unit=UnitOfEnergy.KILO_WATT_HOUR,
+                    device_class=SensorDeviceClass.ENERGY,
+                    display_precision=2,
+                    array_name=array_name,
+                )
+            )
 
     async_add_entities(entities)
 
@@ -290,22 +336,37 @@ class PVGISDiagnosticSensor(
         name: str,
         icon: str | None = None,
         unit: str | None = None,
+        device_class: SensorDeviceClass | None = None,
+        display_precision: int | None = None,
+        array_name: str | None = None,
     ) -> None:
         """Initialize diagnostic sensor."""
         super().__init__(coordinator=coordinator)
         self._key = key
+        self._array_name = array_name
         self._attr_unique_id = f"{entry_id}_{key}"
         self._attr_name = name
         self._attr_icon = icon
         self._attr_native_unit_of_measurement = unit
+        if device_class is not None:
+            self._attr_device_class = device_class
+        if display_precision is not None:
+            self._attr_suggested_display_precision = display_precision
         self.entity_id = f"{SENSOR_DOMAIN}.pvgis_{key}"
+
+        if array_name:
+            device_id = f"{entry_id}_{array_name}"
+            device_name = f"Solar forecast - {array_name}"
+        else:
+            device_id = entry_id
+            device_name = "Solar production forecast"
 
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
-            identifiers={(DOMAIN, entry_id)},
+            identifiers={(DOMAIN, device_id)},
             manufacturer="PVGIS",
             model="Solar Forecast",
-            name="Solar production forecast",
+            name=device_name,
             configuration_url="https://re.jrc.ec.europa.eu/pvg_tools/en/",
         )
 
@@ -314,6 +375,18 @@ class PVGISDiagnosticSensor(
         """Return the state of the sensor."""
         data: SolarForecastData | None = self.coordinator.data
         if data is None:
+            return None
+
+        # Per-array clear sky diagnostics
+        if self._array_name is not None:
+            array_forecast = data.arrays.get(self._array_name)
+            if array_forecast is None:
+                return None
+            base_key = self._key.rsplit(f"_{self._array_name}", 1)[0]
+            if base_key == "clear_sky_power_now":
+                return array_forecast.clear_sky_power_now
+            if base_key == "clear_sky_energy_today":
+                return array_forecast.clear_sky_energy_today
             return None
 
         if self._key == "cloud_coverage":

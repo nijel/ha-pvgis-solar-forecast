@@ -41,6 +41,12 @@ PVGIS_REFRESH_INTERVAL = timedelta(days=30)
 # Forecast update interval - every 30 minutes to pick up weather changes
 FORECAST_UPDATE_INTERVAL = timedelta(minutes=30)
 
+# Shorter retry interval if weather entity is not available at startup
+STARTUP_RETRY_INTERVAL = timedelta(minutes=1)
+
+# Number of days to forecast (7 days)
+FORECAST_DAYS = 7
+
 
 @dataclass
 class SolarArrayData:
@@ -60,7 +66,7 @@ class SolarForecastData:
     cloud_coverage_used: float | None = None
     weather_entity_available: bool = True
     clear_sky_power_now: float = 0.0
-    clear_sky_energy_today: float = 0.0
+    clear_sky_energy_today: float = 0.0  # in kWh
 
 
 @dataclass
@@ -74,6 +80,8 @@ class SolarArrayForecast:
     energy_production_today: float = 0.0
     energy_production_today_remaining: float = 0.0
     energy_production_tomorrow: float = 0.0
+    # Energy production for days 2-6 (day 0 = today, day 1 = tomorrow)
+    energy_production_days: dict[int, float] = field(default_factory=dict)
     power_production_now: float = 0.0
     energy_current_hour: float = 0.0
     energy_next_hour: float = 0.0
@@ -81,6 +89,9 @@ class SolarArrayForecast:
     power_highest_peak_time_tomorrow: datetime | None = None
     peak_power_today: float = 0.0
     peak_power_tomorrow: float = 0.0
+    # Per-array clear sky diagnostics
+    clear_sky_power_now: float = 0.0
+    clear_sky_energy_today: float = 0.0  # in kWh
 
 
 class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
@@ -165,6 +176,12 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         # Get weather forecast for cloud coverage
         cloud_coverage, weather_available = await self._async_get_cloud_coverage()
 
+        # If weather entity is not available, schedule an early retry
+        if not weather_available:
+            self.update_interval = STARTUP_RETRY_INTERVAL
+        else:
+            self.update_interval = FORECAST_UPDATE_INTERVAL
+
         # Compute forecasts
         result = SolarForecastData()
         result.weather_entity_available = weather_available
@@ -190,23 +207,29 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 continue
 
             forecast = self.compute_forecast(array_data.pvgis_data, cloud_coverage, now)
+
+            # Compute per-array clear sky diagnostics
+            array_clear_sky_now = array_data.pvgis_data.get_power(
+                now.month, now.day, now.hour
+            )
+            array_clear_sky_today = sum(
+                array_data.pvgis_data.get_power(now.month, now.day, h)
+                for h in range(24)
+            )
+            forecast.clear_sky_power_now = round(array_clear_sky_now)
+            forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
+
             result.arrays[array_name] = forecast
 
             # Accumulate totals
             for ts, wh in forecast.wh_hours.items():
                 total_wh[ts] = total_wh.get(ts, 0.0) + wh
 
-            # Accumulate clear-sky radiation diagnostics
-            total_clear_sky_now += array_data.pvgis_data.get_power(
-                now.month, now.day, now.hour
-            )
-            for h in range(24):
-                total_clear_sky_today += array_data.pvgis_data.get_power(
-                    now.month, now.day, h
-                )
+            total_clear_sky_now += array_clear_sky_now
+            total_clear_sky_today += array_clear_sky_today
 
-        result.clear_sky_power_now = round(total_clear_sky_now, 1)
-        result.clear_sky_energy_today = round(total_clear_sky_today, 1)
+        result.clear_sky_power_now = round(total_clear_sky_now)
+        result.clear_sky_energy_today = round(total_clear_sky_today / 1000.0, 2)
 
         # Compute total forecast
         result.total = self.compute_total_forecast(total_wh, now)
@@ -316,12 +339,14 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         today = now.date()
         tomorrow = today + timedelta(days=1)
 
-        # Build hourly forecast for 48 hours
+        # Build hourly forecast for 7 days
+        total_hours = FORECAST_DAYS * 24
         wh_hours: dict[str, float] = {}
         detailed: list[dict[str, Any]] = []
         today_total = 0.0
         today_remaining = 0.0
         tomorrow_total = 0.0
+        day_totals: dict[int, float] = {}
         current_hour_wh = 0.0
         next_hour_wh = 0.0
         now_power = 0.0
@@ -330,7 +355,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         peak_power_tomorrow = 0.0
         peak_time_tomorrow: datetime | None = None
 
-        for hour_offset in range(48):
+        for hour_offset in range(total_hours):
             dt = now.replace(minute=0, second=0, microsecond=0) + timedelta(
                 hours=hour_offset
             )
@@ -362,6 +387,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 }
             )
 
+            # Track per-day totals (day 0 = today)
+            day_offset = (dt.date() - today).days
+            if 0 <= day_offset < FORECAST_DAYS:
+                day_totals[day_offset] = (
+                    day_totals.get(day_offset, 0.0) + adjusted_power
+                )
+
             if dt.date() == today:
                 today_total += adjusted_power
                 if dt >= now.replace(minute=0, second=0, microsecond=0):
@@ -386,6 +418,9 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         forecast.energy_production_today = round(today_total, 1)
         forecast.energy_production_today_remaining = round(today_remaining, 1)
         forecast.energy_production_tomorrow = round(tomorrow_total, 1)
+        forecast.energy_production_days = {
+            d: round(v, 1) for d, v in day_totals.items()
+        }
         forecast.power_production_now = round(now_power, 1)
         forecast.energy_current_hour = round(current_hour_wh, 1)
         forecast.energy_next_hour = round(next_hour_wh, 1)
@@ -408,6 +443,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         today_total = 0.0
         today_remaining = 0.0
         tomorrow_total = 0.0
+        day_totals: dict[int, float] = {}
         now_hour = now.replace(minute=0, second=0, microsecond=0)
         peak_power_today = 0.0
         peak_time_today: datetime | None = None
@@ -426,6 +462,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     "pv_estimate": round(wh / 1000.0, 4),
                 }
             )
+
+            # Track per-day totals
+            day_offset = (dt.date() - today).days
+            if 0 <= day_offset < FORECAST_DAYS:
+                day_totals[day_offset] = day_totals.get(day_offset, 0.0) + wh
 
             if dt.date() == today:
                 today_total += wh
@@ -450,6 +491,9 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         forecast.energy_production_today = round(today_total, 1)
         forecast.energy_production_today_remaining = round(today_remaining, 1)
         forecast.energy_production_tomorrow = round(tomorrow_total, 1)
+        forecast.energy_production_days = {
+            d: round(v, 1) for d, v in day_totals.items()
+        }
         forecast.power_highest_peak_time_today = peak_time_today
         forecast.power_highest_peak_time_tomorrow = peak_time_tomorrow
         forecast.peak_power_today = round(peak_power_today, 1)

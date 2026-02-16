@@ -80,7 +80,10 @@ class TestComputeForecast:
 
         assert isinstance(forecast, SolarArrayForecast)
         assert forecast.power_production_now > 0
-        assert len(forecast.wh_hours) == 48
+        # 7 days * 24 hours = 168 hours
+        assert len(forecast.wh_hours) == 168
+        # Should have energy data for multiple days
+        assert len(forecast.energy_production_days) > 0
 
     def test_compute_forecast_with_clouds(self, mock_pvgis_data: PVGISData) -> None:
         """Test that clouds reduce production."""
@@ -113,15 +116,13 @@ class TestComputeForecast:
         """Test computing total forecast from wh_hours."""
         now = datetime(2024, 1, 1, 10, 0, tzinfo=UTC)
         today = now.date()
-        tomorrow = today + timedelta(days=1)
 
         wh_hours = {}
-        for h in range(24):
-            dt = datetime(today.year, today.month, today.day, h, tzinfo=UTC)
-            wh_hours[dt.isoformat()] = 100.0 if 6 <= h <= 18 else 0.0
-        for h in range(24):
-            dt = datetime(tomorrow.year, tomorrow.month, tomorrow.day, h, tzinfo=UTC)
-            wh_hours[dt.isoformat()] = 200.0 if 6 <= h <= 18 else 0.0
+        for d in range(7):
+            day = today + timedelta(days=d)
+            for h in range(24):
+                dt = datetime(day.year, day.month, day.day, h, tzinfo=UTC)
+                wh_hours[dt.isoformat()] = 100.0 if 6 <= h <= 18 else 0.0
 
         coordinator = PVGISSolarForecastCoordinator.__new__(
             PVGISSolarForecastCoordinator
@@ -129,4 +130,8 @@ class TestComputeForecast:
         forecast = coordinator.compute_total_forecast(wh_hours, now)
 
         assert forecast.energy_production_today == 1300.0  # 13 hours * 100
-        assert forecast.energy_production_tomorrow == 2600.0  # 13 hours * 200
+        assert forecast.energy_production_tomorrow == 1300.0  # 13 hours * 100
+        # Should have 7 days of energy data
+        assert len(forecast.energy_production_days) == 7
+        for d in range(7):
+            assert forecast.energy_production_days[d] == 1300.0
