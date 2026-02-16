@@ -249,6 +249,7 @@ class PVGISSolarForecastSensorEntity(
 
     entity_description: PVGISSolarForecastSensorEntityDescription
     _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({"detailedHourly"})
 
     def __init__(
         self,
@@ -303,8 +304,7 @@ class PVGISSolarForecastSensorEntity(
             return None
 
         return {
-            "wh_hours": forecast.wh_hours,
-            "detailedForecast": forecast.detailed_forecast,
+            "detailedHourly": forecast.detailed_forecast,
         }
 
     def _get_forecast(self) -> SolarArrayForecast | None:

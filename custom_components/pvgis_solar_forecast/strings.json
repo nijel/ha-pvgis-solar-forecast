@@ -142,10 +142,10 @@
     },
     "pv_tech": {
       "options": {
-        "crystsi": "Crystalline silicon",
-        "cis": "CIS",
-        "cdte": "CdTe",
-        "unknown": "Unknown"
+        "crystsi": "Crystalline silicon (most common)",
+        "cis": "CIS (Copper Indium Selenide thin-film)",
+        "cdte": "CdTe (Cadmium Telluride thin-film)",
+        "unknown": "Unknown / Other"
       }
     }
   }
