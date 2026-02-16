@@ -8,10 +8,12 @@
           "name": "Název",
           "latitude": "Zeměpisná šířka",
           "longitude": "Zeměpisná délka",
-          "weather_entity": "Entita předpovědi počasí"
+          "weather_entity": "Entita předpovědi počasí",
+          "weather_entity_secondary": "Sekundární entita předpovědi počasí (volitelné)"
         },
         "data_description": {
-          "weather_entity": "Vyberte entitu počasí pro předpověď oblačnosti. Ponechte prázdné pro použití pouze odhadů jasného nebe."
+          "weather_entity": "Vyberte entitu počasí pro předpověď oblačnosti. Ponechte prázdné pro použití pouze odhadů jasného nebe.",
+          "weather_entity_secondary": "Volitelná sekundární entita počasí pro dlouhodobou předpověď nad rámec primární entity (užitečné, když primární poskytuje pouze 24-48h předpověď)."
         }
       },
       "array": {
@@ -43,7 +45,8 @@
         "title": "Možnosti PVGIS solární předpovědi",
         "description": "Nastavte zdroj počasí. Po uložení můžete upravit každé solární pole.",
         "data": {
-          "weather_entity": "Entita předpovědi počasí"
+          "weather_entity": "Entita předpovědi počasí",
+          "weather_entity_secondary": "Sekundární entita předpovědi počasí (volitelné)"
         }
       },
       "edit_array": {
