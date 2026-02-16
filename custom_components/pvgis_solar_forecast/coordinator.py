@@ -921,6 +921,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         for ts, coverage in cloud_coverage.items():
             forecast_dt = datetime.fromisoformat(ts)
+            # Ensure forecast_dt has the same timezone awareness as dt
+            if forecast_dt.tzinfo is None and dt.tzinfo is not None:
+                # forecast_dt is naive, dt is aware - make forecast_dt aware
+                forecast_dt = forecast_dt.replace(tzinfo=dt.tzinfo)
+            elif forecast_dt.tzinfo is not None and dt.tzinfo is None:
+                # forecast_dt is aware, dt is naive - make forecast_dt naive
+                forecast_dt = forecast_dt.replace(tzinfo=None)
             diff = abs(dt - forecast_dt)
             if diff < best_diff:
                 best_diff = diff
