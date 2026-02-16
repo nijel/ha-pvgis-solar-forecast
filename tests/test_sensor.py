@@ -66,6 +66,32 @@ async def test_sensor_values(
 
 
 @pytest.mark.asyncio
+async def test_sensor_forecast_attributes(
+    hass: HomeAssistant,
+    mock_pvgis_fetch: AsyncMock,
+    enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
+) -> None:
+    """Test that sensors expose wh_hours forecast in attributes."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=mock_config_data,
+        options=mock_config_options,
+    )
+    entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get("sensor.pvgis_energy_production_today")
+    assert state is not None
+    assert "wh_hours" in state.attributes
+    assert isinstance(state.attributes["wh_hours"], dict)
+    assert len(state.attributes["wh_hours"]) > 0
+
+
+@pytest.mark.asyncio
 async def test_array_sensors_created(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,

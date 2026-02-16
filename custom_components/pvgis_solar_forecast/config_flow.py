@@ -15,6 +15,13 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
     CONF_ARRAYS,
@@ -31,6 +38,24 @@ from .const import (
     DEFAULT_MOUNTING_PLACE,
     DEFAULT_PV_TECH,
     DOMAIN,
+)
+
+WEATHER_ENTITY_SELECTOR = EntitySelector(EntitySelectorConfig(domain="weather"))
+
+MOUNTING_PLACE_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=["free", "building"],
+        mode=SelectSelectorMode.DROPDOWN,
+        translation_key="mounting_place",
+    )
+)
+
+PV_TECH_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=["crystSi", "CIS", "CdTe", "Unknown"],
+        mode=SelectSelectorMode.DROPDOWN,
+        translation_key="pv_tech",
+    )
 )
 
 
@@ -79,7 +104,9 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_LONGITUDE, default=self.hass.config.longitude
                     ): cv.longitude,
-                    vol.Optional(CONF_WEATHER_ENTITY, default=""): str,
+                    vol.Optional(
+                        CONF_WEATHER_ENTITY,
+                    ): WEATHER_ENTITY_SELECTOR,
                 }
             ),
         )
@@ -137,10 +164,10 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
                     ),
                     vol.Required(
                         CONF_MOUNTING_PLACE, default=DEFAULT_MOUNTING_PLACE
-                    ): vol.In(["free", "building"]),
-                    vol.Required(CONF_PV_TECH, default=DEFAULT_PV_TECH): vol.In(
-                        ["crystSi", "CIS", "CdTe", "Unknown"]
-                    ),
+                    ): MOUNTING_PLACE_SELECTOR,
+                    vol.Required(
+                        CONF_PV_TECH, default=DEFAULT_PV_TECH
+                    ): PV_TECH_SELECTOR,
                     vol.Optional("add_another", default=False): bool,
                 }
             ),
@@ -165,8 +192,8 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
                 {
                     vol.Optional(
                         CONF_WEATHER_ENTITY,
-                        default=weather_entity,
-                    ): str,
+                        description={"suggested_value": weather_entity},
+                    ): WEATHER_ENTITY_SELECTOR,
                 }
             ),
         )

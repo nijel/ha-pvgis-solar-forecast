@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
@@ -192,6 +193,15 @@ class PVGISSolarForecastSensorEntity(
             return self.entity_description.state(forecast)
 
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the state attributes with hourly forecast data."""
+        forecast = self._get_forecast()
+        if forecast is None:
+            return None
+
+        return {"wh_hours": forecast.wh_hours}
 
     def _get_forecast(self) -> SolarArrayForecast | None:
         """Get the forecast data for this sensor's array."""

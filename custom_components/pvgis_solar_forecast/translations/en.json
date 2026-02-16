@@ -11,7 +11,7 @@
           "weather_entity": "Weather forecast entity"
         },
         "data_description": {
-          "weather_entity": "The weather entity to use for cloud coverage forecast. Leave empty to use clear-sky estimates only."
+          "weather_entity": "Select a weather entity to use for cloud coverage forecast. Leave empty to use clear-sky estimates only."
         }
       },
       "array": {
@@ -26,6 +26,9 @@
           "mounting_place": "Mounting type",
           "pv_tech": "PV technology",
           "add_another": "Add another array"
+        },
+        "data_description": {
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
         }
       }
     },
@@ -67,6 +70,22 @@
       },
       "power_production_now": {
         "name": "Estimated power production - now"
+      }
+    }
+  },
+  "selector": {
+    "mounting_place": {
+      "options": {
+        "free": "Free-standing",
+        "building": "Building-integrated"
+      }
+    },
+    "pv_tech": {
+      "options": {
+        "crystSi": "Crystalline silicon",
+        "CIS": "CIS",
+        "CdTe": "CdTe",
+        "Unknown": "Unknown"
       }
     }
   }

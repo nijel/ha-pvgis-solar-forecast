@@ -337,14 +337,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         best_diff = timedelta.max
 
         for ts, coverage in cloud_coverage.items():
-            try:
-                forecast_dt = datetime.fromisoformat(ts)
-                diff = abs(dt - forecast_dt)
-                if diff < best_diff:
-                    best_diff = diff
-                    best_match = coverage
-            except ValueError:
-                continue
+            forecast_dt = datetime.fromisoformat(ts)
+            diff = abs(dt - forecast_dt)
+            if diff < best_diff:
+                best_diff = diff
+                best_match = coverage
 
         if best_match is None or best_diff > timedelta(hours=3):
             return CLOUD_FACTOR_CLEAR

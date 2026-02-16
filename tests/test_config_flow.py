@@ -124,7 +124,6 @@ async def test_multiple_arrays(
             CONF_NAME: "My Solar",
             CONF_LATITUDE: 45.0,
             CONF_LONGITUDE: 8.0,
-            CONF_WEATHER_ENTITY: "",
         },
     )
 
