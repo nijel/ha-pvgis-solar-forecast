@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -61,7 +61,6 @@ async def test_get_solar_forecast_with_historical_data(
     # Get the coordinator and add a historical snapshot
     coordinator = entry.runtime_data
     # Use a fixed datetime for reliable testing
-    from datetime import UTC
     now = datetime(2024, 7, 15, 12, 0, tzinfo=UTC)
     past_time = now - timedelta(hours=2)
     past_hour = past_time.replace(minute=0, second=0, microsecond=0)

@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from custom_components.pvgis_solar_forecast.coordinator import (
+    HISTORICAL_DAYS,
+    ForecastSnapshot,
     PVGISSolarForecastCoordinator,
     SolarArrayForecast,
 )
@@ -142,13 +144,8 @@ class TestHistoricalSnapshots:
 
     def test_cleanup_historical_snapshots(self) -> None:
         """Test cleanup of old historical snapshots."""
-        from custom_components.pvgis_solar_forecast.coordinator import (
-            ForecastSnapshot,
-            HISTORICAL_DAYS,
-        )
-
         now = datetime(2024, 7, 15, 12, 0, tzinfo=UTC)
-        
+
         # Create snapshots spanning 10 days
         snapshots = []
         for days_ago in range(10, 0, -1):
@@ -156,18 +153,21 @@ class TestHistoricalSnapshots:
             snapshots.append(
                 ForecastSnapshot(
                     timestamp=snapshot_time,
-                    wh_hours={(snapshot_time + timedelta(hours=i)).isoformat(): 1000.0 for i in range(24)}
+                    wh_hours={
+                        (snapshot_time + timedelta(hours=i)).isoformat(): 1000.0
+                        for i in range(24)
+                    },
                 )
             )
-        
+
         # Clean up snapshots
         cleaned = PVGISSolarForecastCoordinator._cleanup_historical_snapshots(
             snapshots, now
         )
-        
+
         # Should keep only snapshots from the last HISTORICAL_DAYS
         assert len(cleaned) == HISTORICAL_DAYS
-        
+
         # All remaining snapshots should be within the retention period
         cutoff = now - timedelta(days=HISTORICAL_DAYS)
         for snapshot in cleaned:
@@ -175,12 +175,8 @@ class TestHistoricalSnapshots:
 
     def test_cleanup_keeps_all_recent_snapshots(self) -> None:
         """Test that recent snapshots are all kept."""
-        from custom_components.pvgis_solar_forecast.coordinator import (
-            ForecastSnapshot,
-        )
-
         now = datetime(2024, 7, 15, 12, 0, tzinfo=UTC)
-        
+
         # Create snapshots within the retention period
         snapshots = []
         for hours_ago in range(0, 48, 6):  # Every 6 hours for 2 days
@@ -188,16 +184,19 @@ class TestHistoricalSnapshots:
             snapshots.append(
                 ForecastSnapshot(
                     timestamp=snapshot_time,
-                    wh_hours={(snapshot_time + timedelta(hours=i)).isoformat(): 1000.0 for i in range(24)}
+                    wh_hours={
+                        (snapshot_time + timedelta(hours=i)).isoformat(): 1000.0
+                        for i in range(24)
+                    },
                 )
             )
-        
+
         original_count = len(snapshots)
-        
+
         # Clean up snapshots
         cleaned = PVGISSolarForecastCoordinator._cleanup_historical_snapshots(
             snapshots, now
         )
-        
+
         # Should keep all snapshots since they're all recent
         assert len(cleaned) == original_count
