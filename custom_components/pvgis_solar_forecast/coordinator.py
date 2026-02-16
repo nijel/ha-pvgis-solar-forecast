@@ -47,6 +47,9 @@ STARTUP_RETRY_INTERVAL = timedelta(minutes=1)
 # Number of days to forecast (7 days)
 FORECAST_DAYS = 7
 
+# Number of days to keep historical forecasts
+HISTORICAL_DAYS = 7
+
 
 @dataclass
 class SolarArrayData:
@@ -55,6 +58,14 @@ class SolarArrayData:
     name: str
     pvgis_data: PVGISData | None = None
     last_pvgis_fetch: datetime | None = None
+
+
+@dataclass
+class ForecastSnapshot:
+    """A snapshot of forecast data at a specific time."""
+
+    timestamp: datetime
+    wh_hours: dict[str, float]
 
 
 @dataclass
@@ -67,6 +78,8 @@ class SolarForecastData:
     weather_entity_available: bool = True
     clear_sky_power_now: float = 0.0
     clear_sky_energy_today: float = 0.0  # in kWh
+    # Historical forecast snapshots: list of past forecasts
+    historical_snapshots: list[ForecastSnapshot] = field(default_factory=list)
 
 
 @dataclass
@@ -233,6 +246,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         # Compute total forecast
         result.total = self.compute_total_forecast(total_wh, now)
+
+        # Store historical forecast snapshot and clean up old ones
+        if self.data:
+            result.historical_snapshots = self._cleanup_historical_snapshots(
+                self.data.historical_snapshots, now
+            )
+
+        # Add current forecast as a new snapshot
+        result.historical_snapshots.append(
+            ForecastSnapshot(timestamp=now, wh_hours=total_wh.copy())
+        )
 
         return result
 
@@ -539,3 +563,19 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         return CLOUD_FACTOR_CLEAR - cloud_pct * (
             CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST
         )
+
+    @staticmethod
+    def _cleanup_historical_snapshots(
+        snapshots: list[ForecastSnapshot], now: datetime
+    ) -> list[ForecastSnapshot]:
+        """Clean up historical snapshots older than HISTORICAL_DAYS.
+
+        Args:
+            snapshots: List of historical forecast snapshots.
+            now: Current datetime.
+
+        Returns:
+            Filtered list of snapshots within the retention period.
+        """
+        cutoff_time = now - timedelta(days=HISTORICAL_DAYS)
+        return [s for s in snapshots if s.timestamp >= cutoff_time]
