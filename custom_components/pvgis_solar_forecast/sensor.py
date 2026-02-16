@@ -170,7 +170,7 @@ async def async_setup_entry(
             entry_id=entry.entry_id,
             coordinator=coordinator,
             key="cloud_coverage",
-            name="Cloud coverage",
+            translation_key="cloud_coverage",
             icon="mdi:weather-cloudy",
             unit="%",
         )
@@ -180,7 +180,7 @@ async def async_setup_entry(
             entry_id=entry.entry_id,
             coordinator=coordinator,
             key="clear_sky_power_now",
-            name="Clear sky power now",
+            translation_key="clear_sky_power_now",
             icon="mdi:white-balance-sunny",
             unit=UnitOfPower.WATT,
             device_class=SensorDeviceClass.POWER,
@@ -192,7 +192,7 @@ async def async_setup_entry(
             entry_id=entry.entry_id,
             coordinator=coordinator,
             key="clear_sky_energy_today",
-            name="Clear sky energy today",
+            translation_key="clear_sky_energy_today",
             icon="mdi:solar-power-variant",
             unit=UnitOfEnergy.KILO_WATT_HOUR,
             device_class=SensorDeviceClass.ENERGY,
@@ -208,7 +208,7 @@ async def async_setup_entry(
                     entry_id=entry.entry_id,
                     coordinator=coordinator,
                     key=f"clear_sky_power_now_{array_name}",
-                    name=f"Clear sky power now - {array_name}",
+                    translation_key="clear_sky_power_now",
                     icon="mdi:white-balance-sunny",
                     unit=UnitOfPower.WATT,
                     device_class=SensorDeviceClass.POWER,
@@ -221,21 +221,11 @@ async def async_setup_entry(
                     entry_id=entry.entry_id,
                     coordinator=coordinator,
                     key=f"clear_sky_energy_today_{array_name}",
-                    name=f"Clear sky energy today - {array_name}",
+                    translation_key="clear_sky_energy_today",
                     icon="mdi:solar-power-variant",
                     unit=UnitOfEnergy.KILO_WATT_HOUR,
                     device_class=SensorDeviceClass.ENERGY,
                     display_precision=2,
-                    array_name=array_name,
-                )
-            )
-            entities.append(
-                PVGISDiagnosticSensor(
-                    entry_id=entry.entry_id,
-                    coordinator=coordinator,
-                    key=f"snow_covered_{array_name}",
-                    name=f"Snow covered - {array_name}",
-                    icon="mdi:snowflake",
                     array_name=array_name,
                 )
             )
@@ -334,7 +324,7 @@ class PVGISDiagnosticSensor(
         entry_id: str,
         coordinator: PVGISSolarForecastCoordinator,
         key: str,
-        name: str,
+        translation_key: str,
         icon: str | None = None,
         unit: str | None = None,
         device_class: SensorDeviceClass | None = None,
@@ -346,7 +336,7 @@ class PVGISDiagnosticSensor(
         self._key = key
         self._array_name = array_name
         self._attr_unique_id = f"{entry_id}_{key}"
-        self._attr_name = name
+        self._attr_translation_key = translation_key
         self._attr_icon = icon
         self._attr_native_unit_of_measurement = unit
         if device_class is not None:
@@ -388,8 +378,6 @@ class PVGISDiagnosticSensor(
                 return array_forecast.clear_sky_power_now
             if base_key == "clear_sky_energy_today":
                 return array_forecast.clear_sky_energy_today
-            if base_key == "snow_covered":
-                return array_forecast.snow_covered
             return None
 
         if self._key == "cloud_coverage":

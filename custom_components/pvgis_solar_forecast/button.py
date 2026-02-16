@@ -70,7 +70,7 @@ class SnowOverrideButton(
 
         action = "covered" if snow_covered else "clear"
         self._attr_unique_id = f"{entry_id}_{array_name}_snow_override_{action}"
-        self._attr_name = f"Mark as snow {action} - {array_name}"
+        self._attr_translation_key = f"mark_as_snow_{action}"
         self._attr_icon = "mdi:snowflake-alert" if snow_covered else "mdi:snowflake-off"
 
         device_id = f"{entry_id}_{array_name}"
