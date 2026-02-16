@@ -1,0 +1,152 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nastavení PVGIS solární předpovědi",
+        "description": "Nastavte polohu vaší solární instalace a zdroj počasí.",
+        "data": {
+          "name": "Název",
+          "latitude": "Zeměpisná šířka",
+          "longitude": "Zeměpisná délka",
+          "weather_entity": "Entita předpovědi počasí"
+        },
+        "data_description": {
+          "weather_entity": "Vyberte entitu počasí pro předpověď oblačnosti. Ponechte prázdné pro použití pouze odhadů jasného nebe."
+        }
+      },
+      "array": {
+        "title": "Přidat solární pole",
+        "description": "Nastavte solární pole. Můžete přidat více polí.",
+        "data": {
+          "name": "Název pole",
+          "declination": "Sklon (0 = vodorovně, 90 = svisle)",
+          "azimuth": "Azimut (0 = jih, 90 = západ, -90 = východ)",
+          "modules_power": "Špičkový výkon solárních modulů (kWp)",
+          "loss": "Systémové ztráty (%)",
+          "mounting_place": "Typ montáže",
+          "pv_tech": "Fotovoltaická technologie",
+          "add_another": "Přidat další pole"
+        },
+        "data_description": {
+          "modules_power": "Celkový špičkový výkon všech solárních modulů v tomto poli v kilowattech peak (kWp). Například 10 panelů o výkonu 400 Wp = 4,0 kWp.",
+          "loss": "Součet všech systémových ztrát včetně kabelů, střídače, znečištění a dalších faktorů snižujících skutečný výkon oproti nominálnímu výkonu panelů."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Tato poloha je již nastavena"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Možnosti PVGIS solární předpovědi",
+        "description": "Nastavte zdroj počasí. Po uložení můžete upravit každé solární pole.",
+        "data": {
+          "weather_entity": "Entita předpovědi počasí"
+        }
+      },
+      "edit_array": {
+        "title": "Upravit solární pole: {array_name}",
+        "description": "Upravte nastavení tohoto solárního pole nebo jej odeberte.",
+        "data": {
+          "name": "Název pole",
+          "declination": "Sklon (0 = vodorovně, 90 = svisle)",
+          "azimuth": "Azimut (0 = jih, 90 = západ, -90 = východ)",
+          "modules_power": "Špičkový výkon solárních modulů (kWp)",
+          "loss": "Systémové ztráty (%)",
+          "mounting_place": "Typ montáže",
+          "pv_tech": "Fotovoltaická technologie",
+          "remove_array": "Odebrat toto pole"
+        },
+        "data_description": {
+          "modules_power": "Celkový špičkový výkon všech solárních modulů v tomto poli v kilowattech peak (kWp). Například 10 panelů o výkonu 400 Wp = 4,0 kWp.",
+          "loss": "Součet všech systémových ztrát včetně kabelů, střídače, znečištění a dalších faktorů snižujících skutečný výkon oproti nominálnímu výkonu panelů."
+        }
+      },
+      "add_array": {
+        "title": "Přidat solární pole",
+        "description": "Vyplňte údaje a zaškrtněte 'Přidat další pole' pro přidání nového pole. Odškrtněte pro dokončení bez přidání.",
+        "data": {
+          "name": "Název pole",
+          "declination": "Sklon (0 = vodorovně, 90 = svisle)",
+          "azimuth": "Azimut (0 = jih, 90 = západ, -90 = východ)",
+          "modules_power": "Špičkový výkon solárních modulů (kWp)",
+          "loss": "Systémové ztráty (%)",
+          "mounting_place": "Typ montáže",
+          "pv_tech": "Fotovoltaická technologie",
+          "add_another": "Přidat další pole"
+        },
+        "data_description": {
+          "modules_power": "Celkový špičkový výkon všech solárních modulů v tomto poli v kilowattech peak (kWp). Například 10 panelů o výkonu 400 Wp = 4,0 kWp.",
+          "loss": "Součet všech systémových ztrát včetně kabelů, střídače, znečištění a dalších faktorů snižujících skutečný výkon oproti nominálnímu výkonu panelů."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "energy_current_hour": {
+        "name": "Odhadovaná výroba energie - tato hodina"
+      },
+      "energy_next_hour": {
+        "name": "Odhadovaná výroba energie - příští hodina"
+      },
+      "energy_production_today": {
+        "name": "Odhadovaná výroba energie - dnes"
+      },
+      "energy_production_today_remaining": {
+        "name": "Odhadovaná výroba energie - zbývající dnes"
+      },
+      "energy_production_tomorrow": {
+        "name": "Odhadovaná výroba energie - zítra"
+      },
+      "energy_production_day_2": {
+        "name": "Odhadovaná výroba energie - za 2 dny"
+      },
+      "energy_production_day_3": {
+        "name": "Odhadovaná výroba energie - za 3 dny"
+      },
+      "energy_production_day_4": {
+        "name": "Odhadovaná výroba energie - za 4 dny"
+      },
+      "energy_production_day_5": {
+        "name": "Odhadovaná výroba energie - za 5 dnů"
+      },
+      "energy_production_day_6": {
+        "name": "Odhadovaná výroba energie - za 6 dnů"
+      },
+      "power_highest_peak_time_today": {
+        "name": "Čas nejvyššího výkonu - dnes"
+      },
+      "power_highest_peak_time_tomorrow": {
+        "name": "Čas nejvyššího výkonu - zítra"
+      },
+      "power_production_now": {
+        "name": "Odhadovaný výkon - nyní"
+      },
+      "peak_power_today": {
+        "name": "Špičkový výkon - dnes"
+      },
+      "peak_power_tomorrow": {
+        "name": "Špičkový výkon - zítra"
+      }
+    }
+  },
+  "selector": {
+    "mounting_place": {
+      "options": {
+        "free": "Volně stojící",
+        "building": "Integrovaný do budovy"
+      }
+    },
+    "pv_tech": {
+      "options": {
+        "crystsi": "Krystalický křemík (nejběžnější)",
+        "cis": "CIS (tenkovrstvý selenid mědi a india)",
+        "cdte": "CdTe (tenkovrstvý telurid kademnatý)",
+        "unknown": "Neznámá / Jiná"
+      }
+    }
+  }
+}

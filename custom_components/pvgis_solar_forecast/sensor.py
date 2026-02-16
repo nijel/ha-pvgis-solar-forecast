@@ -302,9 +302,11 @@ class PVGISSolarForecastSensorEntity(
         if forecast is None:
             return None
 
+        # Only expose wh_hours (needed for the energy dashboard integration).
+        # The detailedForecast is intentionally omitted to avoid exceeding
+        # the HA state attributes size limit of 16384 bytes.
         return {
             "wh_hours": forecast.wh_hours,
-            "detailedForecast": forecast.detailed_forecast,
         }
 
     def _get_forecast(self) -> SolarArrayForecast | None:
