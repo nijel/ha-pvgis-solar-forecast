@@ -24,6 +24,7 @@ from .const import (
     CONF_MOUNTING_PLACE,
     CONF_PV_TECH,
     CONF_WEATHER_ENTITY,
+    CONF_WEATHER_ENTITY_SECONDARY,
     DEFAULT_LOSS,
     DEFAULT_MOUNTING_PLACE,
     DEFAULT_PV_TECH,
@@ -137,11 +138,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         self._longitude = entry.data[CONF_LONGITUDE]
         self._arrays_config: list[dict[str, Any]] = entry.options.get(CONF_ARRAYS, [])
         self._weather_entity: str = entry.options.get(CONF_WEATHER_ENTITY, "")
+        self._weather_entity_secondary: str = entry.options.get(
+            CONF_WEATHER_ENTITY_SECONDARY, ""
+        )
 
     def update_config(self, entry: PVGISSolarForecastConfigEntry) -> None:
         """Update configuration from entry options (after reconfiguration)."""
         self._arrays_config = entry.options.get(CONF_ARRAYS, [])
         self._weather_entity = entry.options.get(CONF_WEATHER_ENTITY, "")
+        self._weather_entity_secondary = entry.options.get(
+            CONF_WEATHER_ENTITY_SECONDARY, ""
+        )
         # Reset cached PVGIS data so arrays are re-fetched with new config
         self._arrays_data = {}
 
@@ -305,11 +312,100 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         return result
 
+    async def _async_get_cloud_coverage_from_entity(
+        self, entity_id: str
+    ) -> dict[str, float]:
+        """Get cloud coverage forecast from a single weather entity.
+
+        Args:
+            entity_id: The weather entity ID to fetch from.
+
+        Returns:
+            Cloud coverage dict mapping ISO timestamps to coverage percentage (0-100).
+        """
+        state = self.hass.states.get(entity_id)
+        if state is None:
+            LOGGER.debug(
+                "Weather entity %s not available",
+                entity_id,
+            )
+            return {}
+
+        forecast_data: dict[str, float] = {}
+
+        # Try to get forecast via service call (modern HA approach)
+        try:
+            service_response = await self.hass.services.async_call(
+                "weather",
+                "get_forecasts",
+                {"type": "hourly"},
+                target={"entity_id": entity_id},
+                blocking=True,
+                return_response=True,
+            )
+
+            if service_response and entity_id in service_response:
+                forecasts = service_response[entity_id].get("forecast", [])
+                for item in forecasts:
+                    dt_str = item.get("datetime")
+                    cloud = item.get("cloud_coverage")
+                    if dt_str is not None and cloud is not None:
+                        forecast_data[dt_str] = float(cloud)
+
+                if forecast_data:
+                    return forecast_data
+        except HomeAssistantError:
+            LOGGER.debug(
+                "Failed to get hourly forecast from %s via service, "
+                "trying daily forecast",
+                entity_id,
+            )
+
+        # Fallback: try daily forecast
+        try:
+            service_response = await self.hass.services.async_call(
+                "weather",
+                "get_forecasts",
+                {"type": "daily"},
+                target={"entity_id": entity_id},
+                blocking=True,
+                return_response=True,
+            )
+
+            if service_response and entity_id in service_response:
+                forecasts = service_response[entity_id].get("forecast", [])
+                for item in forecasts:
+                    dt_str = item.get("datetime")
+                    cloud = item.get("cloud_coverage")
+                    if dt_str is not None and cloud is not None:
+                        forecast_data[dt_str] = float(cloud)
+        except HomeAssistantError:
+            LOGGER.debug(
+                "Failed to get daily forecast from %s via service, "
+                "falling back to state attributes",
+                entity_id,
+            )
+
+        # Final fallback: try deprecated forecast attribute
+        if not forecast_data:
+            forecasts = state.attributes.get("forecast", [])
+            if forecasts:
+                for item in forecasts:
+                    dt_str = item.get("datetime")
+                    cloud = item.get("cloud_coverage")
+                    if dt_str is not None and cloud is not None:
+                        forecast_data[dt_str] = float(cloud)
+
+        return forecast_data
+
     async def _async_get_cloud_coverage(self) -> tuple[dict[str, float], bool]:
-        """Get cloud coverage forecast from weather entity.
+        """Get cloud coverage forecast from weather entities.
 
         Uses the weather.get_forecasts service to get hourly forecast data,
         which is the modern HA approach (the forecast attribute was deprecated).
+
+        Fetches from primary weather entity, and if secondary is configured,
+        also fetches from it and merges the data (primary takes precedence).
 
         Gracefully handles the case where the weather entity is not yet
         available (e.g., during HA startup), returning clear-sky defaults.
@@ -330,70 +426,30 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             )
             return {}, False
 
-        forecast_data: dict[str, float] = {}
+        # Get forecast from primary weather entity
+        forecast_data = await self._async_get_cloud_coverage_from_entity(
+            self._weather_entity
+        )
 
-        # Try to get forecast via service call (modern HA approach)
-        try:
-            service_response = await self.hass.services.async_call(
-                "weather",
-                "get_forecasts",
-                {"type": "hourly"},
-                target={"entity_id": self._weather_entity},
-                blocking=True,
-                return_response=True,
+        # If secondary weather entity is configured, fetch and merge
+        if self._weather_entity_secondary:
+            secondary_forecast = await self._async_get_cloud_coverage_from_entity(
+                self._weather_entity_secondary
             )
 
-            if service_response and self._weather_entity in service_response:
-                forecasts = service_response[self._weather_entity].get("forecast", [])
-                for item in forecasts:
-                    dt_str = item.get("datetime")
-                    cloud = item.get("cloud_coverage")
-                    if dt_str is not None and cloud is not None:
-                        forecast_data[dt_str] = float(cloud)
+            # Merge: add timestamps from secondary that are not in primary
+            primary_count = len(forecast_data)
+            for ts, coverage in secondary_forecast.items():
+                if ts not in forecast_data:
+                    forecast_data[ts] = coverage
 
-                if forecast_data:
-                    return forecast_data, True
-        except HomeAssistantError:
-            LOGGER.debug(
-                "Failed to get hourly forecast from %s via service, "
-                "trying daily forecast",
-                self._weather_entity,
-            )
-
-        # Fallback: try daily forecast
-        try:
-            service_response = await self.hass.services.async_call(
-                "weather",
-                "get_forecasts",
-                {"type": "daily"},
-                target={"entity_id": self._weather_entity},
-                blocking=True,
-                return_response=True,
-            )
-
-            if service_response and self._weather_entity in service_response:
-                forecasts = service_response[self._weather_entity].get("forecast", [])
-                for item in forecasts:
-                    dt_str = item.get("datetime")
-                    cloud = item.get("cloud_coverage")
-                    if dt_str is not None and cloud is not None:
-                        forecast_data[dt_str] = float(cloud)
-        except HomeAssistantError:
-            LOGGER.debug(
-                "Failed to get daily forecast from %s via service, "
-                "falling back to state attributes",
-                self._weather_entity,
-            )
-
-        # Final fallback: try deprecated forecast attribute
-        if not forecast_data:
-            forecasts = state.attributes.get("forecast", [])
-            if forecasts:
-                for item in forecasts:
-                    dt_str = item.get("datetime")
-                    cloud = item.get("cloud_coverage")
-                    if dt_str is not None and cloud is not None:
-                        forecast_data[dt_str] = float(cloud)
+            if secondary_forecast:
+                secondary_count = len(forecast_data) - primary_count
+                LOGGER.debug(
+                    "Merged cloud coverage: %d timestamps from primary, %d from secondary",
+                    primary_count,
+                    secondary_count,
+                )
 
         return forecast_data, True
 

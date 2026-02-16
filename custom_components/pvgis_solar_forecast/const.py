@@ -16,6 +16,7 @@ CONF_AZIMUTH = "azimuth"
 CONF_MODULES_POWER = "modules_power"  # stored as kWp
 CONF_LOSS = "loss"
 CONF_WEATHER_ENTITY = "weather_entity"
+CONF_WEATHER_ENTITY_SECONDARY = "weather_entity_secondary"
 CONF_MOUNTING_PLACE = "mounting_place"
 CONF_PV_TECH = "pv_tech"
 

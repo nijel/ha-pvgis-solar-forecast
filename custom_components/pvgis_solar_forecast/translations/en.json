@@ -8,10 +8,12 @@
           "name": "Name",
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "weather_entity": "Weather forecast entity"
+          "weather_entity": "Weather forecast entity",
+          "weather_entity_secondary": "Secondary weather forecast entity (optional)"
         },
         "data_description": {
-          "weather_entity": "Select a weather entity to use for cloud coverage forecast. Leave empty to use clear-sky estimates only."
+          "weather_entity": "Select a weather entity to use for cloud coverage forecast. Leave empty to use clear-sky estimates only.",
+          "weather_entity_secondary": "Optional secondary weather entity for long-term forecast beyond the primary entity's horizon (useful when primary provides only 24-48h forecast)."
         }
       },
       "array": {
@@ -43,7 +45,8 @@
         "title": "PVGIS Solar Forecast Options",
         "description": "Configure the weather source. After saving, you can edit each solar array.",
         "data": {
-          "weather_entity": "Weather forecast entity"
+          "weather_entity": "Weather forecast entity",
+          "weather_entity_secondary": "Secondary weather forecast entity (optional)"
         }
       },
       "edit_array": {

@@ -220,3 +220,68 @@ class TestHistoricalSnapshots:
 
         # Should keep all snapshots since they're all recent
         assert len(cleaned) == original_count
+
+
+class TestSecondaryWeatherEntity:
+    """Test secondary weather entity functionality."""
+
+    def test_cloud_factor_with_limited_primary_forecast(self) -> None:
+        """Test that cloud factor handles limited primary forecast correctly."""
+        # Simulate a primary forecast with only 48 hours
+        now = datetime(2024, 7, 1, 12, 0, tzinfo=UTC)
+
+        # Primary forecast: 48 hours
+        primary_coverage = {}
+        for h in range(48):
+            dt = now + timedelta(hours=h)
+            primary_coverage[dt.isoformat()] = 30.0
+
+        # For hour 0, should use primary forecast
+        factor_h0 = PVGISSolarForecastCoordinator.get_cloud_factor(
+            now, primary_coverage
+        )
+        assert factor_h0 == pytest.approx(0.76)  # 30% clouds
+
+        # For hour 60 (beyond 48h), should fall back to clear sky
+        dt_h60 = now + timedelta(hours=60)
+        factor_h60 = PVGISSolarForecastCoordinator.get_cloud_factor(
+            dt_h60, primary_coverage
+        )
+        assert factor_h60 == 1.0  # Clear sky fallback
+
+    def test_merged_cloud_coverage(self) -> None:
+        """Test merging primary and secondary cloud coverage."""
+        now = datetime(2024, 7, 1, 12, 0, tzinfo=UTC)
+
+        # Primary forecast: 48 hours with 30% clouds
+        primary_coverage = {}
+        for h in range(48):
+            dt = now + timedelta(hours=h)
+            primary_coverage[dt.isoformat()] = 30.0
+
+        # Secondary forecast: 168 hours (7 days) with 50% clouds
+        secondary_coverage = {}
+        for h in range(168):
+            dt = now + timedelta(hours=h)
+            secondary_coverage[dt.isoformat()] = 50.0
+
+        # Merge the forecasts (simulate what coordinator does)
+        merged_coverage = primary_coverage.copy()
+        for ts, coverage in secondary_coverage.items():
+            if ts not in merged_coverage:
+                merged_coverage[ts] = coverage
+
+        # Should have 168 hours total (full 7 days)
+        assert len(merged_coverage) == 168
+
+        # First 48 hours should use primary (30%)
+        for h in range(48):
+            dt = now + timedelta(hours=h)
+            factor = PVGISSolarForecastCoordinator.get_cloud_factor(dt, merged_coverage)
+            assert factor == pytest.approx(0.76)  # 30% clouds from primary
+
+        # Hours 48-168 should use secondary (50%)
+        for h in range(48, 168):
+            dt = now + timedelta(hours=h)
+            factor = PVGISSolarForecastCoordinator.get_cloud_factor(dt, merged_coverage)
+            assert factor == pytest.approx(0.6)  # 50% clouds from secondary
