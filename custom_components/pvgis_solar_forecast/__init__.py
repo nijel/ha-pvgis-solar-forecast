@@ -15,6 +15,14 @@ async def async_setup_entry(
 ) -> bool:
     """Set up PVGIS Solar Forecast from a config entry."""
     coordinator = PVGISSolarForecastCoordinator(hass, entry)
+
+    # Try to restore last forecast to provide immediate data on startup
+    restored_data = await coordinator.async_restore_last_forecast()
+    if restored_data:
+        # Set the restored data as initial coordinator data
+        # This will be replaced by fresh data after first refresh
+        coordinator.data = restored_data
+
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
