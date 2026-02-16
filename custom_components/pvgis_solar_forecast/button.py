@@ -10,10 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import (
-    PVGISSolarForecastConfigEntry,
-    PVGISSolarForecastCoordinator,
-)
+from .coordinator import PVGISSolarForecastConfigEntry, PVGISSolarForecastCoordinator
 
 
 async def async_setup_entry(
@@ -71,7 +68,7 @@ class SnowOverrideButton(
         self._array_name = array_name
         self._snow_covered = snow_covered
 
-        action = "covered" if snow_covered else "clear"
+        action = "covered" if snow_covered else "free"
         self._attr_unique_id = f"{entry_id}_{array_name}_snow_override_{action}"
         self._attr_name = f"Mark as snow {action} - {array_name}"
         self._attr_icon = "mdi:snowflake-alert" if snow_covered else "mdi:snowflake-off"

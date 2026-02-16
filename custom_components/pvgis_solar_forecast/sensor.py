@@ -411,5 +411,3 @@ class PVGISDiagnosticSensor(
             return data.clear_sky_energy_today
 
         return None
-
-        return None
