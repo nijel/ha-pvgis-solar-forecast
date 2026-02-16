@@ -905,7 +905,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         100% clouds = factor 0.2 (20% of clear sky radiation)
 
         Args:
-            dt: The datetime to get the factor for.
+            dt: The datetime to get the factor for (must be timezone-aware).
             cloud_coverage: Mapping of ISO timestamps to cloud coverage %.
 
         Returns:
@@ -921,10 +921,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         for ts, coverage in cloud_coverage.items():
             forecast_dt = datetime.fromisoformat(ts)
-            # Ensure forecast_dt has the same timezone awareness as dt
-            # (dt is always timezone-aware from datetime.now().astimezone())
-            if forecast_dt.tzinfo is None:
-                # forecast_dt is naive - assume it's in the same timezone as dt
+            # Ensure forecast_dt has the same timezone awareness as dt.
+            # dt is always timezone-aware (from datetime.now().astimezone()).
+            # Naive ISO timestamps from weather providers are assumed to represent
+            # the same timezone as dt (typically the user's local timezone).
+            if forecast_dt.tzinfo is None and dt.tzinfo is not None:
                 forecast_dt = forecast_dt.replace(tzinfo=dt.tzinfo)
             diff = abs(dt - forecast_dt)
             if diff < best_diff:
