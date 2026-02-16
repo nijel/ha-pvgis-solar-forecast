@@ -847,6 +847,9 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         tomorrow = today + timedelta(days=1)
 
         # Build hourly forecast for 7 days
+        # Start from midnight of today to include all hours of today in the forecast
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        now_hour = now.replace(minute=0, second=0, microsecond=0)
         total_hours = FORECAST_DAYS * 24
         wh_hours: dict[str, float] = {}
         detailed: list[dict[str, Any]] = []
@@ -863,9 +866,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         peak_time_tomorrow: datetime | None = None
 
         for hour_offset in range(total_hours):
-            dt = now.replace(minute=0, second=0, microsecond=0) + timedelta(
-                hours=hour_offset
-            )
+            dt = today_start + timedelta(hours=hour_offset)
             # Get clear-sky power from PVGIS
             clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
@@ -928,7 +929,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
             if dt.date() == today:
                 today_total += adjusted_power
-                if dt >= now.replace(minute=0, second=0, microsecond=0):
+                if dt >= now_hour:
                     today_remaining += adjusted_power
                 if adjusted_power > peak_power_today:
                     peak_power_today = adjusted_power
@@ -939,10 +940,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     peak_power_tomorrow = adjusted_power
                     peak_time_tomorrow = dt
 
-            if hour_offset == 0:
+            if dt == now_hour:
                 now_power = adjusted_power
                 current_hour_wh = adjusted_power
-            elif hour_offset == 1:
+            elif dt == now_hour + timedelta(hours=1):
                 next_hour_wh = adjusted_power
 
         forecast.wh_hours = wh_hours
@@ -1013,10 +1014,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     peak_power_tomorrow = wh
                     peak_time_tomorrow = dt
 
-            if i == 0:
+            if dt == now_hour:
                 forecast.power_production_now = round(wh, 1)
                 forecast.energy_current_hour = round(wh, 1)
-            elif i == 1:
+            elif dt == now_hour + timedelta(hours=1):
                 forecast.energy_next_hour = round(wh, 1)
 
         forecast.detailed_forecast = detailed
