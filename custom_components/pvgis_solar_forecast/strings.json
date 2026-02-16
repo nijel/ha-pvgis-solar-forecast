@@ -137,7 +137,7 @@
         "name": "Mark as snow covered"
       },
       "mark_as_snow_clear": {
-        "name": "Mark as snow free"
+        "name": "Mark as snow clear"
       }
     }
   },
