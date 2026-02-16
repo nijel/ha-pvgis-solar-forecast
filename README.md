@@ -1,5 +1,7 @@
 # PVGIS Solar Forecast for Home Assistant
 
+[![🔌 Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=nijel&repository=ha-pvgis-solar-forecast&category=integration)
+
 [![HACS Action](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/hacs.yml/badge.svg)](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/hacs.yml)
 [![Validate with hassfest](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/hassfest.yml/badge.svg)](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/hassfest.yml)
 [![Tests](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/test.yml/badge.svg)](https://github.com/nijel/ha-pvgis-solar-forecast/actions/workflows/test.yml)
