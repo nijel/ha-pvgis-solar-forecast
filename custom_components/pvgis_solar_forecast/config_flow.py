@@ -35,6 +35,7 @@ from .const import (
     CONF_MOUNTING_PLACE,
     CONF_PV_TECH,
     CONF_WEATHER_ENTITY,
+    CONF_WEATHER_ENTITY_SECONDARY,
     DEFAULT_AZIMUTH,
     DEFAULT_DECLINATION,
     DEFAULT_LOSS,
@@ -123,6 +124,7 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
         self._latitude: float = 0.0
         self._longitude: float = 0.0
         self._weather_entity: str = ""
+        self._weather_entity_secondary: str = ""
 
     @staticmethod
     @callback
@@ -141,6 +143,7 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
             self._latitude = user_input[CONF_LATITUDE]
             self._longitude = user_input[CONF_LONGITUDE]
             self._weather_entity = user_input.get(CONF_WEATHER_ENTITY, "")
+            self._weather_entity_secondary = user_input.get(CONF_WEATHER_ENTITY_SECONDARY, "")
             return await self.async_step_array()
 
         return self.async_show_form(
@@ -158,6 +161,9 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): cv.longitude,
                     vol.Optional(
                         CONF_WEATHER_ENTITY,
+                    ): WEATHER_ENTITY_SELECTOR,
+                    vol.Optional(
+                        CONF_WEATHER_ENTITY_SECONDARY,
                     ): WEATHER_ENTITY_SELECTOR,
                 }
             ),
@@ -191,6 +197,7 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
                 },
                 options={
                     CONF_WEATHER_ENTITY: self._weather_entity,
+                    CONF_WEATHER_ENTITY_SECONDARY: self._weather_entity_secondary,
                     CONF_ARRAYS: self._arrays,
                 },
             )
@@ -210,6 +217,7 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
         """Initialize the options flow."""
         self._arrays: list[dict[str, Any]] = []
         self._weather_entity: str = ""
+        self._weather_entity_secondary: str = ""
         self._editing_index: int = 0
 
     async def async_step_init(
@@ -218,6 +226,7 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
         """Manage the options - main menu."""
         if user_input is not None:
             self._weather_entity = user_input.get(CONF_WEATHER_ENTITY, "")
+            self._weather_entity_secondary = user_input.get(CONF_WEATHER_ENTITY_SECONDARY, "")
             # Start editing arrays from the beginning
             self._arrays = []
             existing_arrays = self.config_entry.options.get(CONF_ARRAYS, [])
@@ -227,6 +236,7 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
             return await self.async_step_add_array()
 
         weather_entity = self.config_entry.options.get(CONF_WEATHER_ENTITY, "")
+        weather_entity_secondary = self.config_entry.options.get(CONF_WEATHER_ENTITY_SECONDARY, "")
 
         return self.async_show_form(
             step_id="init",
@@ -235,6 +245,10 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
                     vol.Optional(
                         CONF_WEATHER_ENTITY,
                         description={"suggested_value": weather_entity},
+                    ): WEATHER_ENTITY_SELECTOR,
+                    vol.Optional(
+                        CONF_WEATHER_ENTITY_SECONDARY,
+                        description={"suggested_value": weather_entity_secondary},
                     ): WEATHER_ENTITY_SELECTOR,
                 }
             ),
@@ -340,6 +354,7 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
                 title="",
                 data={
                     CONF_WEATHER_ENTITY: self._weather_entity,
+                    CONF_WEATHER_ENTITY_SECONDARY: self._weather_entity_secondary,
                     CONF_ARRAYS: self._arrays,
                 },
             )
