@@ -1,7 +1,3 @@
-[project]
-name = "ha-pvgis-solar-forecast"
-requires-python = ">=3.13"
-
 [tool.codespell]
 ignore-words-list = "hass"
 
