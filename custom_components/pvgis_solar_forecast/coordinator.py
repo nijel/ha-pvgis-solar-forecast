@@ -438,15 +438,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             )
 
             # Merge: add timestamps from secondary that are not in primary
+            primary_count = len(forecast_data)
             for ts, coverage in secondary_forecast.items():
                 if ts not in forecast_data:
                     forecast_data[ts] = coverage
 
             if secondary_forecast:
+                secondary_count = len(forecast_data) - primary_count
                 LOGGER.debug(
                     "Merged cloud coverage: %d timestamps from primary, %d from secondary",
-                    len([ts for ts in forecast_data if ts not in secondary_forecast]),
-                    len([ts for ts in forecast_data if ts in secondary_forecast]),
+                    primary_count,
+                    secondary_count,
                 )
 
         return forecast_data, True

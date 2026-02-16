@@ -85,4 +85,6 @@ your energy configuration.
    the secondary provides extended forecast data beyond the primary's horizon.
 
 1. **Forecast Generation**: The integration combines PVGIS data with weather
-   forecasts to produce hourly production estimates for the next 7 days.
+   forecasts to produce hourly production estimates for up to 7 days. The actual
+   forecast duration depends on the available weather data from your configured
+   weather entities.
