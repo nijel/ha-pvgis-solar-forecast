@@ -1,0 +1,152 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Setup PVGIS Solar Forecast",
+        "description": "Configure your solar installation location and weather source.",
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "latitude": "[%key:common::config_flow::data::latitude%]",
+          "longitude": "[%key:common::config_flow::data::longitude%]",
+          "weather_entity": "Weather forecast entity"
+        },
+        "data_description": {
+          "weather_entity": "Select a weather entity to use for cloud coverage forecast. Leave empty to use clear-sky estimates only."
+        }
+      },
+      "array": {
+        "title": "Add Solar Array",
+        "description": "Configure a solar array. You can add multiple arrays.",
+        "data": {
+          "name": "Array name",
+          "declination": "Declination (0 = Horizontal, 90 = Vertical)",
+          "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
+          "modules_power": "Peak power of solar modules (kWp)",
+          "loss": "System losses (%)",
+          "mounting_place": "Mounting type",
+          "pv_tech": "PV technology",
+          "add_another": "Add another array"
+        },
+        "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This location is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PVGIS Solar Forecast Options",
+        "description": "Configure the weather source. After saving, you can edit each solar array.",
+        "data": {
+          "weather_entity": "Weather forecast entity"
+        }
+      },
+      "edit_array": {
+        "title": "Edit Solar Array: {array_name}",
+        "description": "Modify the configuration for this solar array, or remove it.",
+        "data": {
+          "name": "Array name",
+          "declination": "Declination (0 = Horizontal, 90 = Vertical)",
+          "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
+          "modules_power": "Peak power of solar modules (kWp)",
+          "loss": "System losses (%)",
+          "mounting_place": "Mounting type",
+          "pv_tech": "PV technology",
+          "remove_array": "Remove this array"
+        },
+        "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
+        }
+      },
+      "add_array": {
+        "title": "Add Solar Array",
+        "description": "Fill in the details and check 'Add another array' to add a new array. Uncheck it to finish without adding.",
+        "data": {
+          "name": "Array name",
+          "declination": "Declination (0 = Horizontal, 90 = Vertical)",
+          "azimuth": "Azimuth (0 = South, 90 = West, -90 = East)",
+          "modules_power": "Peak power of solar modules (kWp)",
+          "loss": "System losses (%)",
+          "mounting_place": "Mounting type",
+          "pv_tech": "PV technology",
+          "add_another": "Add another array"
+        },
+        "data_description": {
+          "modules_power": "Total peak power of all solar modules in this array in kilowatts peak (kWp). For example, 10 panels of 400 Wp = 4.0 kWp.",
+          "loss": "Sum of all system losses including cables, inverter, dirt, and other factors reducing the actual output compared to the nominal panel power."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "energy_current_hour": {
+        "name": "Estimated energy production - this hour"
+      },
+      "energy_next_hour": {
+        "name": "Estimated energy production - next hour"
+      },
+      "energy_production_today": {
+        "name": "Estimated energy production - today"
+      },
+      "energy_production_today_remaining": {
+        "name": "Estimated energy production - remaining today"
+      },
+      "energy_production_tomorrow": {
+        "name": "Estimated energy production - tomorrow"
+      },
+      "energy_production_day_2": {
+        "name": "Estimated energy production - in 2 days"
+      },
+      "energy_production_day_3": {
+        "name": "Estimated energy production - in 3 days"
+      },
+      "energy_production_day_4": {
+        "name": "Estimated energy production - in 4 days"
+      },
+      "energy_production_day_5": {
+        "name": "Estimated energy production - in 5 days"
+      },
+      "energy_production_day_6": {
+        "name": "Estimated energy production - in 6 days"
+      },
+      "power_highest_peak_time_today": {
+        "name": "Highest power peak time - today"
+      },
+      "power_highest_peak_time_tomorrow": {
+        "name": "Highest power peak time - tomorrow"
+      },
+      "power_production_now": {
+        "name": "Estimated power production - now"
+      },
+      "peak_power_today": {
+        "name": "Peak power - today"
+      },
+      "peak_power_tomorrow": {
+        "name": "Peak power - tomorrow"
+      }
+    }
+  },
+  "selector": {
+    "mounting_place": {
+      "options": {
+        "free": "Free-standing",
+        "building": "Building-integrated"
+      }
+    },
+    "pv_tech": {
+      "options": {
+        "crystsi": "Crystalline silicon",
+        "cis": "CIS",
+        "cdte": "CdTe",
+        "unknown": "Unknown"
+      }
+    }
+  }
+}
