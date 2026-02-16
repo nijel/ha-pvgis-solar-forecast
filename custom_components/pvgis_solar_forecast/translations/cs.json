@@ -137,14 +137,16 @@
       "cloud_coverage": {
         "name": "Pokrytí oblaky"
       },
-      "weather_entity_available": {
-        "name": "Dostupnost entity počasí"
-      },
       "clear_sky_power_now": {
         "name": "Výkon jasné oblohy - nyní"
       },
       "clear_sky_energy_today": {
         "name": "Energie jasné oblohy - dnes"
+      }
+    },
+    "binary_sensor": {
+      "weather_entity_available": {
+        "name": "Dostupnost entity počasí"
       },
       "snow_covered": {
         "name": "Pokryto sněhem"

@@ -179,15 +179,6 @@ async def async_setup_entry(
         PVGISDiagnosticSensor(
             entry_id=entry.entry_id,
             coordinator=coordinator,
-            key="weather_entity_available",
-            translation_key="weather_entity_available",
-            icon="mdi:weather-partly-cloudy",
-        )
-    )
-    entities.append(
-        PVGISDiagnosticSensor(
-            entry_id=entry.entry_id,
-            coordinator=coordinator,
             key="clear_sky_power_now",
             translation_key="clear_sky_power_now",
             icon="mdi:white-balance-sunny",
@@ -235,16 +226,6 @@ async def async_setup_entry(
                     unit=UnitOfEnergy.KILO_WATT_HOUR,
                     device_class=SensorDeviceClass.ENERGY,
                     display_precision=2,
-                    array_name=array_name,
-                )
-            )
-            entities.append(
-                PVGISDiagnosticSensor(
-                    entry_id=entry.entry_id,
-                    coordinator=coordinator,
-                    key=f"snow_covered_{array_name}",
-                    translation_key="snow_covered",
-                    icon="mdi:snowflake",
                     array_name=array_name,
                 )
             )
@@ -397,14 +378,10 @@ class PVGISDiagnosticSensor(
                 return array_forecast.clear_sky_power_now
             if base_key == "clear_sky_energy_today":
                 return array_forecast.clear_sky_energy_today
-            if base_key == "snow_covered":
-                return array_forecast.snow_covered
             return None
 
         if self._key == "cloud_coverage":
             return data.cloud_coverage_used
-        if self._key == "weather_entity_available":
-            return data.weather_entity_available
         if self._key == "clear_sky_power_now":
             return data.clear_sky_power_now
         if self._key == "clear_sky_energy_today":

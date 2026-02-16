@@ -137,14 +137,16 @@
       "cloud_coverage": {
         "name": "Cloud coverage"
       },
-      "weather_entity_available": {
-        "name": "Weather entity available"
-      },
       "clear_sky_power_now": {
         "name": "Clear sky power - now"
       },
       "clear_sky_energy_today": {
         "name": "Clear sky energy - today"
+      }
+    },
+    "binary_sensor": {
+      "weather_entity_available": {
+        "name": "Weather entity available"
       },
       "snow_covered": {
         "name": "Snow covered"

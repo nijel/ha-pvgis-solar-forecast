@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 
 from .coordinator import PVGISSolarForecastConfigEntry, PVGISSolarForecastCoordinator
 
-PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
+PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.BINARY_SENSOR]
 
 
 async def async_setup_entry(
