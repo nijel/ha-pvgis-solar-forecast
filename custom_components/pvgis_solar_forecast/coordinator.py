@@ -30,6 +30,11 @@ from .const import (
     DOMAIN,
     LOGGER,
     PV_TECH_API_MAP,
+    SNOW_FACTOR_COVERED,
+    SNOW_MELT_RADIATION_HOURS,
+    SNOW_MELT_RADIATION_THRESHOLD,
+    SNOW_SLIDE_INCLINATION,
+    SNOW_TEMP_THRESHOLD,
 )
 from .pvgis import PVGISData, PVGISError, fetch_pvgis_data
 
@@ -80,6 +85,8 @@ class SolarForecastData:
     clear_sky_energy_today: float = 0.0  # in kWh
     # Historical forecast snapshots: list of past forecasts
     historical_snapshots: list[ForecastSnapshot] = field(default_factory=list)
+    # Snow detection: per-array manual overrides {array_name: snow_covered}
+    snow_overrides: dict[str, bool | None] = field(default_factory=dict)
 
 
 @dataclass
@@ -105,6 +112,8 @@ class SolarArrayForecast:
     # Per-array clear sky diagnostics
     clear_sky_power_now: float = 0.0
     clear_sky_energy_today: float = 0.0  # in kWh
+    # Snow detection status
+    snow_covered: bool = False
 
 
 class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
@@ -189,6 +198,14 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         # Get weather forecast for cloud coverage
         cloud_coverage, weather_available = await self._async_get_cloud_coverage()
 
+        # Get weather data for snow detection
+        (
+            temperature_data,
+            precipitation_data,
+            snow_data,
+            _,
+        ) = await self._async_get_weather_data()
+
         # If weather entity is not available, schedule an early retry
         if not weather_available:
             self.update_interval = STARTUP_RETRY_INTERVAL
@@ -198,6 +215,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         # Compute forecasts
         result = SolarForecastData()
         result.weather_entity_available = weather_available
+
+        # Preserve snow overrides from previous state
+        if self.data and self.data.snow_overrides:
+            result.snow_overrides = self.data.snow_overrides.copy()
+
         total_wh: dict[str, float] = {}
         total_clear_sky_now = 0.0
         total_clear_sky_today = 0.0
@@ -219,7 +241,23 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             if array_data is None or array_data.pvgis_data is None:
                 continue
 
-            forecast = self.compute_forecast(array_data.pvgis_data, cloud_coverage, now)
+            # Detect snow on this array
+            snow_covered = self._detect_snow_on_array(
+                array_name,
+                array_config,
+                array_data.pvgis_data,
+                temperature_data,
+                precipitation_data,
+                snow_data,
+                now,
+            )
+
+            forecast = self.compute_forecast(
+                array_data.pvgis_data, cloud_coverage, now, snow_covered
+            )
+
+            # Set snow status on forecast
+            forecast.snow_covered = snow_covered
 
             # Compute per-array clear sky diagnostics
             array_clear_sky_now = array_data.pvgis_data.get_power(
@@ -352,11 +390,214 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         return forecast_data, True
 
+    async def _async_get_weather_data(
+        self,
+    ) -> tuple[dict[str, float], dict[str, float], dict[str, float], bool]:
+        """Get temperature, precipitation, and snow data from weather entity.
+
+        Returns:
+            Tuple of (temperature_dict, precipitation_dict, snow_dict, available).
+            Temperature in °C, precipitation/snow in mm.
+        """
+        if not self._weather_entity:
+            return {}, {}, {}, True
+
+        state = self.hass.states.get(self._weather_entity)
+        if state is None:
+            LOGGER.debug(
+                "Weather entity %s not available for snow detection",
+                self._weather_entity,
+            )
+            return {}, {}, {}, False
+
+        temperature_data: dict[str, float] = {}
+        precipitation_data: dict[str, float] = {}
+        snow_data: dict[str, float] = {}
+
+        # Try to get forecast via service call
+        try:
+            service_response = await self.hass.services.async_call(
+                "weather",
+                "get_forecasts",
+                {"type": "hourly"},
+                target={"entity_id": self._weather_entity},
+                blocking=True,
+                return_response=True,
+            )
+
+            if service_response and self._weather_entity in service_response:
+                forecasts = service_response[self._weather_entity].get("forecast", [])
+                for item in forecasts:
+                    dt_str = item.get("datetime")
+                    if dt_str is None:
+                        continue
+
+                    temp = item.get("temperature")
+                    if temp is not None:
+                        temperature_data[dt_str] = float(temp)
+
+                    precip = item.get("precipitation")
+                    if precip is not None:
+                        precipitation_data[dt_str] = float(precip)
+
+                    # Some weather providers have explicit snow field
+                    snow = item.get("snow")
+                    if snow is not None:
+                        snow_data[dt_str] = float(snow)
+
+                if temperature_data:
+                    return temperature_data, precipitation_data, snow_data, True
+        except HomeAssistantError:
+            LOGGER.debug(
+                "Failed to get weather data from %s for snow detection",
+                self._weather_entity,
+            )
+
+        return {}, {}, {}, True
+
+    def _detect_snow_on_array(
+        self,
+        array_name: str,
+        array_config: dict[str, Any],
+        pvgis_data: PVGISData,
+        temperature_data: dict[str, float],
+        precipitation_data: dict[str, float],
+        snow_data: dict[str, float],
+        now: datetime,
+    ) -> bool:
+        """Detect if array is likely covered by snow.
+
+        Detection logic:
+        1. Check manual override first
+        2. Look for recent snow in forecast (last 24 hours)
+        3. Check if temperature is below threshold
+        4. Check if there has been enough radiation to melt snow
+        5. Consider panel inclination (steeper angles shed snow better)
+
+        Args:
+            array_name: Name of the array.
+            array_config: Array configuration dict.
+            pvgis_data: PVGIS data for the array.
+            temperature_data: Temperature forecast dict.
+            precipitation_data: Precipitation forecast dict.
+            snow_data: Snow forecast dict (if available).
+            now: Current datetime.
+
+        Returns:
+            True if array is likely covered by snow.
+        """
+        # Check for manual override
+        if self.data and array_name in self.data.snow_overrides:
+            override = self.data.snow_overrides[array_name]
+            if override is not None:
+                return override
+
+        # Get panel inclination (declination)
+        inclination = array_config.get(CONF_DECLINATION, 0)
+
+        # Look back 24 hours for snow events
+        lookback_hours = 24
+        recent_snow = False
+
+        for hour_offset in range(-lookback_hours, 1):
+            dt = now.replace(minute=0, second=0, microsecond=0) + timedelta(
+                hours=hour_offset
+            )
+            dt_str = dt.isoformat()
+
+            # Check if there was snow
+            if dt_str in snow_data and snow_data[dt_str] > 0:
+                recent_snow = True
+
+            # Check for precipitation + cold temperature (implicit snow)
+            if dt_str in temperature_data:
+                temp = temperature_data[dt_str]
+                if temp < SNOW_TEMP_THRESHOLD:
+                    if dt_str in precipitation_data and precipitation_data[dt_str] > 0:
+                        recent_snow = True
+
+        # If no recent snow, panels are clear
+        if not recent_snow:
+            return False
+
+        # Snow detected - check if it has melted
+        # Calculate cumulative radiation since snow event
+        cumulative_radiation_hours = 0.0
+
+        for hour_offset in range(-lookback_hours, 1):
+            dt = now.replace(minute=0, second=0, microsecond=0) + timedelta(
+                hours=hour_offset
+            )
+            dt_str = dt.isoformat()
+
+            # Check temperature - snow doesn't melt if too cold
+            if dt_str in temperature_data:
+                temp = temperature_data[dt_str]
+                if temp < SNOW_TEMP_THRESHOLD:
+                    # Reset counter when cold
+                    cumulative_radiation_hours = 0.0
+                    continue
+
+            # Get radiation from PVGIS data
+            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+
+            # Estimate radiation (W/m²) from power
+            # Rough approximation: panel power ~= radiation * area * efficiency
+            # Assuming ~200 W/m² per kW of panel power in good conditions
+            estimated_radiation = (
+                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                if array_config[CONF_MODULES_POWER] > 0
+                else 0
+            )
+
+            # Count hours with significant radiation
+            if estimated_radiation > SNOW_MELT_RADIATION_THRESHOLD:
+                cumulative_radiation_hours += 1.0
+
+        # Adjust melt threshold based on inclination
+        # Steeper panels shed snow more easily
+        melt_hours_needed = SNOW_MELT_RADIATION_HOURS
+        if inclination > SNOW_SLIDE_INCLINATION:
+            # Reduce needed melt time for steep panels
+            angle_factor = (inclination - SNOW_SLIDE_INCLINATION) / 60.0
+            melt_hours_needed *= max(0.5, 1.0 - angle_factor)
+
+        # If enough radiation to melt snow, panels are clear
+        if cumulative_radiation_hours >= melt_hours_needed:
+            return False
+
+        # Snow still present
+        return True
+
+    def set_snow_override(self, array_name: str, snow_covered: bool | None) -> None:
+        """Set manual override for snow coverage on an array.
+
+        Args:
+            array_name: Name of the array.
+            snow_covered: True if covered, False if clear, None to remove override.
+        """
+        if self.data is None:
+            return
+
+        if snow_covered is None:
+            # Remove override
+            self.data.snow_overrides.pop(array_name, None)
+        else:
+            # Set override
+            self.data.snow_overrides[array_name] = snow_covered
+
+        LOGGER.info(
+            "Snow override set for %s: %s",
+            array_name,
+            "covered" if snow_covered else "clear" if snow_covered is False else "auto",
+        )
+
     def compute_forecast(
         self,
         pvgis_data: PVGISData,
         cloud_coverage: dict[str, float],
         now: datetime,
+        snow_covered: bool = False,
     ) -> SolarArrayForecast:
         """Compute forecast for a single array."""
         forecast = SolarArrayForecast()
@@ -389,6 +630,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             # Apply cloud coverage factor
             cloud_factor = self.get_cloud_factor(dt, cloud_coverage)
             adjusted_power = clear_sky_power * cloud_factor
+
+            # Apply snow factor if array is snow covered
+            if snow_covered:
+                adjusted_power *= SNOW_FACTOR_COVERED
 
             # Energy in Wh for this hour
             ts_key = dt.isoformat()

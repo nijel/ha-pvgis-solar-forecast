@@ -43,3 +43,15 @@ MOUNTING_PLACE_OPTIONS = ["free", "building"]
 # Maps cloud coverage percentage to a multiplicative factor for clear-sky radiation
 CLOUD_FACTOR_CLEAR = 1.0  # 0% clouds
 CLOUD_FACTOR_OVERCAST = 0.2  # 100% clouds
+
+# Snow detection constants
+# Temperature threshold (°C) - snow persists below this
+SNOW_TEMP_THRESHOLD = 2.0
+# Hours of sunlight (radiation) needed to melt snow on panels
+SNOW_MELT_RADIATION_HOURS = 4.0
+# Radiation threshold (W/m²) to consider as "sunny" for melting
+SNOW_MELT_RADIATION_THRESHOLD = 300.0
+# Snow factor for covered panels (heavy production reduction)
+SNOW_FACTOR_COVERED = 0.05  # 5% of normal production when snow covered
+# Inclination threshold (degrees) - higher tilt helps snow slide off
+SNOW_SLIDE_INCLINATION = 30.0
