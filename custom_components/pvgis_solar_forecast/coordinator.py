@@ -929,6 +929,8 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
             if dt.date() == today:
                 today_total += adjusted_power
+                # Include current hour and future hours in remaining
+                # (current hour is not yet complete)
                 if dt >= now_hour:
                     today_remaining += adjusted_power
                 if adjusted_power > peak_power_today:
@@ -1003,6 +1005,8 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
             if dt.date() == today:
                 today_total += wh
+                # Include current hour and future hours in remaining
+                # (current hour is not yet complete)
                 if dt >= now_hour:
                     today_remaining += wh
                 if wh > peak_power_today:
