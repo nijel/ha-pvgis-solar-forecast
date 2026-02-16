@@ -15,15 +15,13 @@ from custom_components.pvgis_solar_forecast.pvgis import (
     fetch_pvgis_data,
 )
 
-from .conftest import MOCK_PVGIS_RESPONSE
-
 
 class TestParsePvgisResponse:
     """Test PVGIS response parsing."""
 
-    def test_parse_valid_response(self) -> None:
+    def test_parse_valid_response(self, mock_pvgis_response: dict) -> None:
         """Test parsing a valid PVGIS response."""
-        data = _parse_pvgis_response(MOCK_PVGIS_RESPONSE)
+        data = _parse_pvgis_response(mock_pvgis_response)
 
         assert isinstance(data, PVGISData)
         # January 1st at noon
@@ -88,11 +86,11 @@ class TestFetchPvgisData:
     """Test PVGIS API fetching."""
 
     @pytest.mark.asyncio
-    async def test_fetch_success(self) -> None:
+    async def test_fetch_success(self, mock_pvgis_response: dict) -> None:
         """Test successful API fetch."""
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=MOCK_PVGIS_RESPONSE)
+        mock_response.json = AsyncMock(return_value=mock_pvgis_response)
 
         mock_session = AsyncMock(spec=aiohttp.ClientSession)
         mock_context = AsyncMock()

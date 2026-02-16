@@ -154,9 +154,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             if array_data is None or array_data.pvgis_data is None:
                 continue
 
-            forecast = self._compute_forecast(
-                array_data.pvgis_data, cloud_coverage, now
-            )
+            forecast = self.compute_forecast(array_data.pvgis_data, cloud_coverage, now)
             result.arrays[array_name] = forecast
 
             # Accumulate totals
@@ -164,7 +162,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 total_wh[ts] = total_wh.get(ts, 0.0) + wh
 
         # Compute total forecast
-        result.total = self._compute_total_forecast(total_wh, now)
+        result.total = self.compute_total_forecast(total_wh, now)
 
         return result
 
@@ -197,7 +195,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         return forecast_data
 
-    def _compute_forecast(
+    def compute_forecast(
         self,
         pvgis_data: PVGISData,
         cloud_coverage: dict[str, float],
@@ -229,7 +227,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Apply cloud coverage factor
-            cloud_factor = self._get_cloud_factor(dt, cloud_coverage)
+            cloud_factor = self.get_cloud_factor(dt, cloud_coverage)
             adjusted_power = clear_sky_power * cloud_factor
 
             # Energy in Wh for this hour
@@ -267,7 +265,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         return forecast
 
-    def _compute_total_forecast(
+    def compute_total_forecast(
         self, total_wh: dict[str, float], now: datetime
     ) -> SolarArrayForecast:
         """Compute total forecast from accumulated wh_hours."""
@@ -316,7 +314,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         return forecast
 
     @staticmethod
-    def _get_cloud_factor(dt: datetime, cloud_coverage: dict[str, float]) -> float:
+    def get_cloud_factor(dt: datetime, cloud_coverage: dict[str, float]) -> float:
         """Get cloud factor for a specific datetime.
 
         Maps cloud coverage percentage to a radiation factor.
@@ -335,7 +333,6 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             return CLOUD_FACTOR_CLEAR
 
         # Find the closest forecast time
-        dt_iso = dt.isoformat()
         best_match: float | None = None
         best_diff = timedelta.max
 
@@ -354,4 +351,6 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         # Linear interpolation: 0% cloud = 1.0, 100% cloud = 0.2
         cloud_pct = min(100, max(0, best_match)) / 100.0
-        return CLOUD_FACTOR_CLEAR - cloud_pct * (CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST)
+        return CLOUD_FACTOR_CLEAR - cloud_pct * (
+            CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST
+        )

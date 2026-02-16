@@ -113,31 +113,29 @@ async def async_setup_entry(
     """Set up PVGIS Solar Forecast sensors."""
     coordinator = entry.runtime_data
 
-    entities: list[PVGISSolarForecastSensorEntity] = []
-
     # Create sensors for the total forecast
-    for description in SENSORS:
-        entities.append(
-            PVGISSolarForecastSensorEntity(
-                entry_id=entry.entry_id,
-                coordinator=coordinator,
-                entity_description=description,
-                array_name=None,
-            )
+    entities: list[PVGISSolarForecastSensorEntity] = [
+        PVGISSolarForecastSensorEntity(
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            entity_description=description,
+            array_name=None,
         )
+        for description in SENSORS
+    ]
 
     # Create sensors for each individual array
     if coordinator.data and coordinator.data.arrays:
         for array_name in coordinator.data.arrays:
-            for description in SENSORS:
-                entities.append(
-                    PVGISSolarForecastSensorEntity(
-                        entry_id=entry.entry_id,
-                        coordinator=coordinator,
-                        entity_description=description,
-                        array_name=array_name,
-                    )
+            entities.extend(
+                PVGISSolarForecastSensorEntity(
+                    entry_id=entry.entry_id,
+                    coordinator=coordinator,
+                    entity_description=description,
+                    array_name=array_name,
                 )
+                for description in SENSORS
+            )
 
     async_add_entities(entities)
 
@@ -164,9 +162,7 @@ class PVGISSolarForecastSensorEntity(
         self._array_name = array_name
 
         if array_name:
-            self._attr_unique_id = (
-                f"{entry_id}_{array_name}_{entity_description.key}"
-            )
+            self._attr_unique_id = f"{entry_id}_{array_name}_{entity_description.key}"
             device_name = f"Solar forecast - {array_name}"
             device_id = f"{entry_id}_{array_name}"
         else:

@@ -122,9 +122,7 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="array",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_NAME, default=f"Array {array_num}"
-                    ): str,
+                    vol.Required(CONF_NAME, default=f"Array {array_num}"): str,
                     vol.Required(
                         CONF_DECLINATION, default=DEFAULT_DECLINATION
                     ): vol.All(vol.Coerce(int), vol.Range(min=0, max=90)),
@@ -140,9 +138,9 @@ class PVGISSolarForecastConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_MOUNTING_PLACE, default=DEFAULT_MOUNTING_PLACE
                     ): vol.In(["free", "building"]),
-                    vol.Required(
-                        CONF_PV_TECH, default=DEFAULT_PV_TECH
-                    ): vol.In(["crystSi", "CIS", "CdTe", "Unknown"]),
+                    vol.Required(CONF_PV_TECH, default=DEFAULT_PV_TECH): vol.In(
+                        ["crystSi", "CIS", "CdTe", "Unknown"]
+                    ),
                     vol.Optional("add_another", default=False): bool,
                 }
             ),
@@ -159,7 +157,6 @@ class PVGISSolarForecastOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        arrays = self.config_entry.options.get(CONF_ARRAYS, [])
         weather_entity = self.config_entry.options.get(CONF_WEATHER_ENTITY, "")
 
         return self.async_show_form(

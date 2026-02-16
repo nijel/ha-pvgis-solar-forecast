@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.pvgis_solar_forecast.const import DOMAIN
-
-from .conftest import MOCK_CONFIG_DATA, MOCK_CONFIG_OPTIONS, create_mock_pvgis_data
-
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.core import HomeAssistant
 
 
 @pytest.mark.asyncio
@@ -21,12 +17,14 @@ async def test_setup_entry(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,
     enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
 ) -> None:
     """Test setting up the integration."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=MOCK_CONFIG_DATA,
-        options=MOCK_CONFIG_OPTIONS,
+        data=mock_config_data,
+        options=mock_config_options,
     )
     entry.add_to_hass(hass)
 
@@ -41,12 +39,14 @@ async def test_unload_entry(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,
     enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
 ) -> None:
     """Test unloading the integration."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=MOCK_CONFIG_DATA,
-        options=MOCK_CONFIG_OPTIONS,
+        data=mock_config_data,
+        options=mock_config_options,
     )
     entry.add_to_hass(hass)
 

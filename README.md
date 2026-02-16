@@ -22,24 +22,24 @@ Geographical Information System) radiation data combined with weather forecasts.
 ### HACS (recommended)
 
 1. Open HACS in your Home Assistant instance
-2. Click on "Integrations"
-3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add `https://github.com/nijel/ha-pvgis-solar-forecast` as an Integration
-5. Install the integration
-6. Restart Home Assistant
+1. Click on "Integrations"
+1. Click the three dots in the top right corner and select "Custom repositories"
+1. Add `https://github.com/nijel/ha-pvgis-solar-forecast` as an Integration
+1. Install the integration
+1. Restart Home Assistant
 
 ### Manual
 
 1. Copy `custom_components/pvgis_solar_forecast` to your `config/custom_components/` directory
-2. Restart Home Assistant
+1. Restart Home Assistant
 
 ## Configuration
 
 1. Go to **Settings** → **Devices & Services** → **Add Integration**
-2. Search for "PVGIS Solar Forecast"
-3. Configure your location (defaults to your Home Assistant location)
-4. Optionally select a weather forecast entity for cloud coverage data
-5. Add one or more solar arrays with their specifications:
+1. Search for "PVGIS Solar Forecast"
+1. Configure your location (defaults to your Home Assistant location)
+1. Optionally select a weather forecast entity for cloud coverage data
+1. Add one or more solar arrays with their specifications:
    - **Declination**: Panel tilt angle (0° horizontal, 90° vertical)
    - **Azimuth**: Panel orientation (0° = South, 90° = West, -90° = East)
    - **Peak Power**: Total watt peak power of the array
@@ -51,16 +51,16 @@ Geographical Information System) radiation data combined with weather forecasts.
 
 The integration creates the following sensors for each array and for the total:
 
-| Sensor | Description | Unit |
-|--------|-------------|------|
-| Energy production today | Estimated total energy production for today | kWh |
-| Energy production remaining today | Estimated remaining energy production for today | kWh |
-| Energy production tomorrow | Estimated total energy production for tomorrow | kWh |
-| Power production now | Current estimated power production | W |
-| Energy current hour | Estimated energy production this hour | kWh |
-| Energy next hour | Estimated energy production next hour | kWh |
-| Highest peak time today | Time of highest power peak today | timestamp |
-| Highest peak time tomorrow | Time of highest power peak tomorrow | timestamp |
+| Sensor                            | Description                                     | Unit      |
+| --------------------------------- | ----------------------------------------------- | --------- |
+| Energy production today           | Estimated total energy production for today     | kWh       |
+| Energy production remaining today | Estimated remaining energy production for today | kWh       |
+| Energy production tomorrow        | Estimated total energy production for tomorrow  | kWh       |
+| Power production now              | Current estimated power production              | W         |
+| Energy current hour               | Estimated energy production this hour           | kWh       |
+| Energy next hour                  | Estimated energy production next hour           | kWh       |
+| Highest peak time today           | Time of highest power peak today                | timestamp |
+| Highest peak time tomorrow        | Time of highest power peak tomorrow             | timestamp |
 
 ## Energy Dashboard
 
@@ -75,10 +75,10 @@ your energy configuration.
    represents clear-sky production averaged over multiple years. It is cached
    and refreshed monthly since the underlying data doesn't change.
 
-2. **Weather Adjustment**: If a weather entity is configured, cloud coverage
+1. **Weather Adjustment**: If a weather entity is configured, cloud coverage
    forecasts are used to adjust the clear-sky estimates. The adjustment uses a
    linear mapping where 0% clouds = 100% of clear-sky production and 100%
    clouds = 20% of clear-sky production.
 
-3. **Forecast Generation**: The integration combines PVGIS data with weather
+1. **Forecast Generation**: The integration combines PVGIS data with weather
    forecasts to produce hourly production estimates for the next 48 hours.

@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-
-from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.pvgis_solar_forecast.const import DOMAIN
-
-from .conftest import MOCK_CONFIG_DATA, MOCK_CONFIG_OPTIONS
-
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.core import HomeAssistant
 
 
 @pytest.mark.asyncio
@@ -20,12 +16,14 @@ async def test_sensors_created(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,
     enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
 ) -> None:
     """Test that sensors are created."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=MOCK_CONFIG_DATA,
-        options=MOCK_CONFIG_OPTIONS,
+        data=mock_config_data,
+        options=mock_config_options,
     )
     entry.add_to_hass(hass)
 
@@ -46,12 +44,14 @@ async def test_sensor_values(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,
     enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
 ) -> None:
     """Test that sensor values are populated."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=MOCK_CONFIG_DATA,
-        options=MOCK_CONFIG_OPTIONS,
+        data=mock_config_data,
+        options=mock_config_options,
     )
     entry.add_to_hass(hass)
 
@@ -70,12 +70,14 @@ async def test_array_sensors_created(
     hass: HomeAssistant,
     mock_pvgis_fetch: AsyncMock,
     enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
 ) -> None:
     """Test that per-array sensors are created."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data=MOCK_CONFIG_DATA,
-        options=MOCK_CONFIG_OPTIONS,
+        data=mock_config_data,
+        options=mock_config_options,
     )
     entry.add_to_hass(hass)
 

@@ -103,9 +103,7 @@ async def fetch_pvgis_data(
                 )
             data = await response.json(content_type=None)
     except aiohttp.ClientError as err:
-        raise PVGISConnectionError(
-            f"Failed to connect to PVGIS API: {err}"
-        ) from err
+        raise PVGISConnectionError(f"Failed to connect to PVGIS API: {err}") from err
 
     return _parse_pvgis_response(data)
 

@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
-
-from homeassistant import config_entries
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.pvgis_solar_forecast.const import (
     CONF_ARRAYS,
@@ -22,12 +17,14 @@ from custom_components.pvgis_solar_forecast.const import (
     CONF_WEATHER_ENTITY,
     DOMAIN,
 )
+from homeassistant import config_entries
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
 
 @pytest.mark.asyncio
-async def test_user_step(
-    hass: HomeAssistant, enable_custom_integrations: None
-) -> None:
+async def test_user_step(hass: HomeAssistant, enable_custom_integrations: None) -> None:
     """Test the user step of the config flow."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}

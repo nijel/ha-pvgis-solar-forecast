@@ -7,8 +7,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
-
 from custom_components.pvgis_solar_forecast.const import (
     CONF_ARRAYS,
     CONF_AZIMUTH,
@@ -18,9 +16,12 @@ from custom_components.pvgis_solar_forecast.const import (
     CONF_MOUNTING_PLACE,
     CONF_PV_TECH,
     CONF_WEATHER_ENTITY,
-    DOMAIN,
 )
-from custom_components.pvgis_solar_forecast.pvgis import PVGISData
+from custom_components.pvgis_solar_forecast.pvgis import (
+    PVGISData,
+    _parse_pvgis_response,
+)
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 
 MOCK_PVGIS_RESPONSE = {
     "outputs": {
@@ -58,7 +59,6 @@ MOCK_PVGIS_RESPONSE = {
     }
 }
 
-
 MOCK_CONFIG_DATA = {
     CONF_LATITUDE: 45.0,
     CONF_LONGITUDE: 8.0,
@@ -82,9 +82,31 @@ MOCK_CONFIG_OPTIONS = {
 
 def create_mock_pvgis_data() -> PVGISData:
     """Create mock PVGISData from the test response."""
-    from custom_components.pvgis_solar_forecast.pvgis import _parse_pvgis_response
-
     return _parse_pvgis_response(MOCK_PVGIS_RESPONSE)
+
+
+@pytest.fixture
+def mock_config_data() -> dict:
+    """Provide mock config data."""
+    return MOCK_CONFIG_DATA.copy()
+
+
+@pytest.fixture
+def mock_config_options() -> dict:
+    """Provide mock config options."""
+    return MOCK_CONFIG_OPTIONS.copy()
+
+
+@pytest.fixture
+def mock_pvgis_response() -> dict:
+    """Provide mock PVGIS API response."""
+    return MOCK_PVGIS_RESPONSE.copy()
+
+
+@pytest.fixture
+def mock_pvgis_data() -> PVGISData:
+    """Provide mock PVGISData."""
+    return create_mock_pvgis_data()
 
 
 @pytest.fixture
