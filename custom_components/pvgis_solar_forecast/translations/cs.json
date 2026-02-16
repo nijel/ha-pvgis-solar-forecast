@@ -90,49 +90,64 @@
   "entity": {
     "sensor": {
       "energy_current_hour": {
-        "name": "Odhadovaná výroba energie - tato hodina"
+        "name": "Energie - tato hodina"
       },
       "energy_next_hour": {
-        "name": "Odhadovaná výroba energie - příští hodina"
+        "name": "Energie - příští hodina"
       },
       "energy_production_today": {
-        "name": "Odhadovaná výroba energie - dnes"
+        "name": "Energie - dnes"
       },
       "energy_production_today_remaining": {
-        "name": "Odhadovaná výroba energie - zbývající dnes"
+        "name": "Energie - zbývající dnes"
       },
       "energy_production_tomorrow": {
-        "name": "Odhadovaná výroba energie - zítra"
+        "name": "Energie - zítra"
       },
       "energy_production_day_2": {
-        "name": "Odhadovaná výroba energie - za 2 dny"
+        "name": "Energie - za 2 dny"
       },
       "energy_production_day_3": {
-        "name": "Odhadovaná výroba energie - za 3 dny"
+        "name": "Energie - za 3 dny"
       },
       "energy_production_day_4": {
-        "name": "Odhadovaná výroba energie - za 4 dny"
+        "name": "Energie - za 4 dny"
       },
       "energy_production_day_5": {
-        "name": "Odhadovaná výroba energie - za 5 dnů"
+        "name": "Energie - za 5 dnů"
       },
       "energy_production_day_6": {
-        "name": "Odhadovaná výroba energie - za 6 dnů"
+        "name": "Energie - za 6 dnů"
       },
       "power_highest_peak_time_today": {
-        "name": "Čas nejvyššího výkonu - dnes"
+        "name": "Čas špičky - dnes"
       },
       "power_highest_peak_time_tomorrow": {
-        "name": "Čas nejvyššího výkonu - zítra"
+        "name": "Čas špičky - zítra"
       },
       "power_production_now": {
-        "name": "Odhadovaný výkon - nyní"
+        "name": "Výkon - nyní"
       },
       "peak_power_today": {
         "name": "Špičkový výkon - dnes"
       },
       "peak_power_tomorrow": {
         "name": "Špičkový výkon - zítra"
+      },
+      "cloud_coverage": {
+        "name": "Pokrytí oblaky"
+      },
+      "weather_entity_available": {
+        "name": "Dostupnost entity počasí"
+      },
+      "clear_sky_power_now": {
+        "name": "Výkon jasné oblohy - nyní"
+      },
+      "clear_sky_energy_today": {
+        "name": "Energie jasné oblohy - dnes"
+      },
+      "snow_covered": {
+        "name": "Pokryto sněhem"
       }
     },
     "button": {
