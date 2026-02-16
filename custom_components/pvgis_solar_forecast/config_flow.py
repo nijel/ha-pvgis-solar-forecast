@@ -93,7 +93,7 @@ def _get_array_schema(
             ): vol.All(vol.Coerce(int), vol.Range(min=-180, max=180)),
             vol.Required(
                 CONF_MODULES_POWER,
-                default=d.get(CONF_MODULES_POWER),
+                default=d.get(CONF_MODULES_POWER, 1.0),
             ): POWER_SELECTOR,
             vol.Required(CONF_LOSS, default=d.get(CONF_LOSS, DEFAULT_LOSS)): vol.All(
                 vol.Coerce(float), vol.Range(min=0, max=100)
