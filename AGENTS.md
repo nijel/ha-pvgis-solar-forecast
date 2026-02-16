@@ -25,25 +25,6 @@ pre-commit run --all-files
 1. Run pre-commit again until all checks pass
 1. Commit the fixes
 
-### Pre-commit Hooks
-
-This repository uses the following pre-commit hooks:
-
-- **trailing-whitespace**: Removes trailing whitespace
-- **end-of-file-fixer**: Ensures files end with a newline
-- **check-merge-conflict**: Detects merge conflict markers
-- **check-yaml/json/toml**: Validates file syntax
-- **debug-statements**: Detects Python debug statements
-- **mixed-line-ending**: Enforces LF line endings
-- **pretty-format-json**: Formats JSON files (2-space indent, preserve order)
-- **ruff**: Python linting with auto-fix
-- **ruff-format**: Python code formatting
-- **pretty-format-yaml**: Formats YAML files (2-space indent)
-- **pretty-format-toml**: Formats TOML files
-- **validate-pyproject**: Validates pyproject.toml
-- **mdformat**: Formats Markdown files (with GitHub Flavored Markdown)
-- **codespell**: Spell checking
-
 ### Important Notes
 
 - Do not commit code that fails pre-commit checks
