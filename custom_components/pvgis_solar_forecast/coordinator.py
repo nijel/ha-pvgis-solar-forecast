@@ -9,6 +9,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -166,7 +167,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             if now_key in cloud_coverage:
                 result.cloud_coverage_used = cloud_coverage[now_key]
             else:
-                # Find closest
+                # Use first available cloud coverage value
                 for cov in cloud_coverage.values():
                     result.cloud_coverage_used = cov
                     break
@@ -231,7 +232,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
                 if forecast_data:
                     return forecast_data, True
-        except Exception:  # noqa: BLE001
+        except HomeAssistantError:
             LOGGER.debug(
                 "Failed to get hourly forecast from %s via service, "
                 "trying daily forecast",
@@ -256,7 +257,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cloud = item.get("cloud_coverage")
                     if dt_str is not None and cloud is not None:
                         forecast_data[dt_str] = float(cloud)
-        except Exception:  # noqa: BLE001
+        except HomeAssistantError:
             LOGGER.debug(
                 "Failed to get daily forecast from %s via service, "
                 "falling back to state attributes",
