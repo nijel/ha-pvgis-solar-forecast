@@ -86,12 +86,15 @@ async def test_sensor_forecast_attributes(
 
     state = hass.states.get("sensor.pvgis_energy_production_today")
     assert state is not None
-    assert "wh_hours" in state.attributes
-    assert isinstance(state.attributes["wh_hours"], dict)
-    assert len(state.attributes["wh_hours"]) > 0
-    # detailedForecast is intentionally not stored in state attributes
-    # to avoid exceeding the HA 16384 byte state attributes size limit
-    assert "detailedForecast" not in state.attributes
+    assert "detailedHourly" in state.attributes
+    assert isinstance(state.attributes["detailedHourly"], list)
+    assert len(state.attributes["detailedHourly"]) > 0
+    # Check detailed forecast structure
+    entry0 = state.attributes["detailedHourly"][0]
+    assert "period_start" in entry0
+    assert "pv_estimate" in entry0
+    # wh_hours is provided via energy.py, not stored in state attributes
+    assert "wh_hours" not in state.attributes
 
 
 @pytest.mark.asyncio
