@@ -191,7 +191,12 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             dt_str = item.get("datetime")
             cloud = item.get("cloud_coverage")
             if dt_str is not None and cloud is not None:
-                forecast_data[dt_str] = float(cloud)
+                try:
+                    # Validate the timestamp is valid ISO format
+                    datetime.fromisoformat(dt_str)
+                    forecast_data[dt_str] = float(cloud)
+                except (ValueError, TypeError):
+                    continue
 
         return forecast_data
 
