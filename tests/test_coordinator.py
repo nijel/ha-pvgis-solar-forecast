@@ -66,6 +66,26 @@ class TestCloudFactor:
         factor = PVGISSolarForecastCoordinator.get_cloud_factor(dt, coverage)
         assert factor == 1.0
 
+    def test_timezone_naive_forecast_string(self) -> None:
+        """Test handling timezone-naive ISO strings (without timezone info)."""
+        # Some weather providers return ISO strings without timezone
+        dt = datetime(2024, 7, 1, 12, 0, tzinfo=UTC)
+        # Simulate a naive ISO string (no timezone suffix)
+        naive_iso = "2024-07-01T12:00:00"
+        coverage = {naive_iso: 50.0}
+        factor = PVGISSolarForecastCoordinator.get_cloud_factor(dt, coverage)
+        assert factor == pytest.approx(0.6)
+
+    def test_timezone_aware_forecast_string(self) -> None:
+        """Test handling timezone-aware ISO strings (Aladin integration case)."""
+        # Aladin integration provides timezone-aware ISO strings
+        dt = datetime(2024, 7, 1, 12, 0, tzinfo=UTC)
+        # Simulate a timezone-aware ISO string (with +00:00 suffix)
+        aware_iso = "2024-07-01T12:00:00+00:00"
+        coverage = {aware_iso: 75.0}
+        factor = PVGISSolarForecastCoordinator.get_cloud_factor(dt, coverage)
+        assert factor == pytest.approx(0.4)
+
 
 class TestComputeForecast:
     """Test forecast computation."""
