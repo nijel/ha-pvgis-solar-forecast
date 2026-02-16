@@ -102,19 +102,19 @@
         "name": "Estimated energy production - tomorrow"
       },
       "energy_production_day_2": {
-        "name": "Estimated energy production - day 3"
+        "name": "Estimated energy production - in 2 days"
       },
       "energy_production_day_3": {
-        "name": "Estimated energy production - day 4"
+        "name": "Estimated energy production - in 3 days"
       },
       "energy_production_day_4": {
-        "name": "Estimated energy production - day 5"
+        "name": "Estimated energy production - in 4 days"
       },
       "energy_production_day_5": {
-        "name": "Estimated energy production - day 6"
+        "name": "Estimated energy production - in 5 days"
       },
       "energy_production_day_6": {
-        "name": "Estimated energy production - day 7"
+        "name": "Estimated energy production - in 6 days"
       },
       "power_highest_peak_time_today": {
         "name": "Highest power peak time - today"

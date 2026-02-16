@@ -80,7 +80,7 @@ class SolarArrayForecast:
     energy_production_today: float = 0.0
     energy_production_today_remaining: float = 0.0
     energy_production_tomorrow: float = 0.0
-    # Energy production for days 2-6 (day 0 = today, day 1 = tomorrow)
+    # Energy production for days 0-6 (day 0 = today, day 1 = tomorrow, etc.)
     energy_production_days: dict[int, float] = field(default_factory=dict)
     power_production_now: float = 0.0
     energy_current_hour: float = 0.0
