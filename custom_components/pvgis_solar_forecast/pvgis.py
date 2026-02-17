@@ -10,6 +10,11 @@ import aiohttp
 
 from .const import LOGGER, PVGIS_API_URL
 
+# Clear-sky calculation constants
+MIN_TMY_IRRADIANCE = 1.0  # Minimum TMY irradiance (W/m²) for scaling calculation
+MIN_SCALING_FACTOR = 1.0  # Minimum clear-sky scaling factor (TMY is lower bound)
+MAX_SCALING_FACTOR = 2.0  # Maximum clear-sky scaling factor (reasonable upper bound)
+
 
 class PVGISError(Exception):
     """Base exception for PVGIS API errors."""
@@ -127,16 +132,18 @@ class PVGISData:
         clearsky_irradiance = self.get_clearsky_irradiance(month, day, hour)
 
         # If we have PVGIS clear-sky irradiance data, use it directly
-        if clearsky_irradiance > 0 and tmy_irradiance >= 1.0:
+        if clearsky_irradiance > 0 and tmy_irradiance >= MIN_TMY_IRRADIANCE:
             # Scale power by irradiance ratio using PVGIS clear-sky data
             scaling_factor = clearsky_irradiance / tmy_irradiance
             # Clamp to reasonable range (TMY shouldn't be higher than clear-sky)
-            scaling_factor = max(1.0, min(scaling_factor, 2.0))
+            scaling_factor = max(
+                MIN_SCALING_FACTOR, min(scaling_factor, MAX_SCALING_FACTOR)
+            )
             return tmy_power * scaling_factor
 
         # Fallback: calculate clear-sky irradiance from sun position
         sun_height = self.get_sun_height(month, day, hour)
-        if tmy_irradiance >= 1.0 and sun_height > 0:
+        if tmy_irradiance >= MIN_TMY_IRRADIANCE and sun_height > 0:
             # Calculate day of year (approximate - good enough for this purpose)
             days_in_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
             day_of_year = sum(days_in_month[:month]) + day
@@ -147,7 +154,9 @@ class PVGISData:
             # Scale power by irradiance ratio
             scaling_factor = clearsky_irradiance / tmy_irradiance
             # Clamp to reasonable range
-            scaling_factor = max(1.0, min(scaling_factor, 2.0))
+            scaling_factor = max(
+                MIN_SCALING_FACTOR, min(scaling_factor, MAX_SCALING_FACTOR)
+            )
             return tmy_power * scaling_factor
 
         # Final fallback: return TMY power

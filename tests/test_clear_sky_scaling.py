@@ -69,7 +69,9 @@ class TestClearSkyCalculation:
         # Create PVGIS data with clear-sky irradiance
         hourly_data = {(1, 1, 12): 1000.0}  # TMY power
         irradiance_data = {(1, 1, 12): 500.0}  # TMY irradiance
-        clearsky_irradiance_data = {(1, 1, 12): 750.0}  # Clear-sky irradiance (1.5x)
+        clearsky_irradiance_data = {
+            (1, 1, 12): 750.0
+        }  # Clear-sky irradiance (1.5x TMY irradiance)
         pvgis_data = PVGISData(
             hourly_data, irradiance_data, None, clearsky_irradiance_data
         )
