@@ -691,14 +691,15 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cumulative_radiation_hours = 0.0
                     continue
 
-            # Get radiation from PVGIS data
-            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            # Get typical radiation from PVGIS TMY data
+            # Note: This is TMY (typical) power, not actual or forecasted
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Estimate radiation (W/m²) from power
             # Rough approximation: panel power ~= radiation * area * efficiency
             # Assuming ~200 W/m² per kW of panel power in good conditions
             estimated_radiation = (
-                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                tmy_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
                 if array_config[CONF_MODULES_POWER] > 0
                 else 0
             )
@@ -789,12 +790,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cumulative_radiation_hours = 0.0
                     continue
 
-            # Get radiation from PVGIS data
-            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            # Get typical radiation from PVGIS TMY data
+            # Note: This is TMY (typical) power, not actual or forecasted
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Estimate radiation (W/m²) from power
             estimated_radiation = (
-                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                tmy_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
                 if array_config[CONF_MODULES_POWER] > 0
                 else 0
             )
