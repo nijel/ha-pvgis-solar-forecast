@@ -146,5 +146,5 @@ class TestClearSkyCalculation:
         noon_entry = forecast.detailed_forecast[12]
         assert noon_entry["pv_estimate_clear_sky"] > 0
 
-        # Clear-sky should be higher than estimate (no clouds = TMY baseline)
+        # With no clouds, estimate equals clear-sky
         assert noon_entry["pv_estimate_clear_sky"] >= noon_entry["pv_estimate"]
