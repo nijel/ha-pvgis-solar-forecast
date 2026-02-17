@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CLEAR_SKY_FACTOR,
     CLOUD_FACTOR_CLEAR,
     CLOUD_FACTOR_OVERCAST,
     CONF_ARRAYS,
@@ -353,13 +354,15 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             forecast.snow_covered = snow_covered
 
             # Compute per-array clear sky diagnostics
+            # Apply CLEAR_SKY_FACTOR to convert PVGIS TMY data to true clear-sky estimate
+            # PVGIS TMY data includes typical weather (clouds), so we scale it up
             array_clear_sky_now = array_data.pvgis_data.get_power(
                 now.month, now.day, now.hour
-            )
+            ) * CLEAR_SKY_FACTOR
             array_clear_sky_today = sum(
                 array_data.pvgis_data.get_power(now.month, now.day, h)
                 for h in range(24)
-            )
+            ) * CLEAR_SKY_FACTOR
             forecast.clear_sky_power_now = round(array_clear_sky_now)
             forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
 
@@ -924,7 +927,10 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 {
                     "period_start": ts_key,
                     "pv_estimate": round(adjusted_power / 1000.0, 4),
-                    "pv_estimate_clear_sky": round(clear_sky_power / 1000.0, 4),
+                    # Apply CLEAR_SKY_FACTOR to convert PVGIS TMY to true clear-sky
+                    "pv_estimate_clear_sky": round(
+                        clear_sky_power * CLEAR_SKY_FACTOR / 1000.0, 4
+                    ),
                     "cloud_coverage": round(
                         (1.0 - cloud_factor)
                         / (CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST)
