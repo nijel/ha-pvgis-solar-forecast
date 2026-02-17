@@ -691,14 +691,15 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cumulative_radiation_hours = 0.0
                     continue
 
-            # Get radiation from PVGIS data
-            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            # Get typical radiation from PVGIS TMY data
+            # Note: This is TMY (typical) power, not actual or forecasted
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Estimate radiation (W/m²) from power
             # Rough approximation: panel power ~= radiation * area * efficiency
             # Assuming ~200 W/m² per kW of panel power in good conditions
             estimated_radiation = (
-                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                tmy_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
                 if array_config[CONF_MODULES_POWER] > 0
                 else 0
             )
@@ -789,12 +790,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cumulative_radiation_hours = 0.0
                     continue
 
-            # Get radiation from PVGIS data
-            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            # Get typical radiation from PVGIS TMY data
+            # Note: This is TMY (typical) power, not actual or forecasted
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Estimate radiation (W/m²) from power
             estimated_radiation = (
-                clear_sky_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
+                tmy_power / (array_config[CONF_MODULES_POWER] * 1000) * 200
                 if array_config[CONF_MODULES_POWER] > 0
                 else 0
             )
@@ -877,10 +879,8 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         for hour_offset in range(total_hours):
             dt = today_start + timedelta(hours=hour_offset)
-            # Get TMY power from PVGIS (used for forecast calculations)
-            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
-
             # Get clear-sky power for this hour (accounts for seasonal variations)
+            # This is the baseline power under clear sky conditions
             clear_sky_power = pvgis_data.get_clearsky_power(dt.month, dt.day, dt.hour)
 
             # Apply cloud coverage factor to TMY power
@@ -895,7 +895,9 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cloud_coverage_to_use = historical_cloud
 
             cloud_factor = self.get_cloud_factor(dt, cloud_coverage_to_use)
-            adjusted_power = tmy_power * cloud_factor
+            # Apply cloud factor to clear-sky power (baseline without clouds)
+            # rather than TMY power (which already includes typical weather)
+            adjusted_power = clear_sky_power * cloud_factor
 
             # Predict snow for this specific hour if weather data available
             hour_snow_covered = snow_covered  # Default to current state
