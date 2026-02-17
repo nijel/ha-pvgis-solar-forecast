@@ -65,6 +65,12 @@ The integration creates the following sensors for each array and for the total:
 | Energy next hour                  | Estimated energy production next hour           | kWh       |
 | Highest peak time today           | Time of highest power peak today                | timestamp |
 | Highest peak time tomorrow        | Time of highest power peak tomorrow             | timestamp |
+| Clear sky power now               | Theoretical power under ideal clear-sky         | W         |
+| Clear sky energy today            | Theoretical energy under ideal clear-sky        | kWh       |
+
+**Note**: Clear sky sensors represent theoretical maximum production under ideal
+conditions (0% clouds). These values are derived from PVGIS Typical Meteorological
+Year (TMY) data scaled by a factor of 1.3 to approximate true clear-sky conditions.
 
 ## Energy Dashboard
 
@@ -76,13 +82,19 @@ your energy configuration.
 
 1. **PVGIS Data**: The integration fetches hourly PV production estimates from
    the PVGIS API based on your panel configuration and location. This data
-   represents clear-sky production averaged over multiple years. It is cached
-   and refreshed monthly since the underlying data doesn't change.
+   represents typical production averaged over multiple years (Typical
+   Meteorological Year - TMY). It is cached and refreshed monthly since the
+   underlying data doesn't change.
+
+1. **Clear Sky Estimates**: The integration provides clear-sky sensors that
+   represent theoretical maximum production under ideal conditions (0% clouds).
+   These are calculated by scaling the PVGIS TMY data by a factor of 1.3,
+   accounting for the typical cloud coverage included in TMY data.
 
 1. **Weather Adjustment**: If a weather entity is configured, cloud coverage
-   forecasts are used to adjust the clear-sky estimates. The adjustment uses a
-   linear mapping where 0% clouds = 100% of clear-sky production and 100%
-   clouds = 20% of clear-sky production. If both primary and secondary weather
+   forecasts are used to adjust the PVGIS baseline estimates. The adjustment uses a
+   linear mapping where 0% clouds = 100% of PVGIS baseline and 100%
+   clouds = 20% of PVGIS baseline. If both primary and secondary weather
    entities are configured, the primary forecast is used when available, and
    the secondary provides extended forecast data beyond the primary's horizon.
 
