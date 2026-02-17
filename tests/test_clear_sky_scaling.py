@@ -64,6 +64,40 @@ class TestClearSkyCalculation:
         # Sun below horizon = zero
         assert calculate_clearsky_irradiance(-10.0, 1) == 0.0
 
+    def test_clear_sky_uses_pvgis_gcs_data(self) -> None:
+        """Test that clear-sky calculation uses PVGIS Gcs(i) data when available."""
+        # Create PVGIS data with clear-sky irradiance
+        hourly_data = {(1, 1, 12): 1000.0}  # Typical Meteorological Year (TMY) power
+        irradiance_data = {
+            (1, 1, 12): 500.0
+        }  # Typical Meteorological Year (TMY) irradiance
+        clearsky_irradiance_data = {
+            (1, 1, 12): 750.0
+        }  # Clear-sky irradiance (1.5x TMY irradiance)
+        pvgis_data = PVGISData(
+            hourly_data, irradiance_data, None, clearsky_irradiance_data
+        )
+
+        # Clear-sky power should be scaled by (Gcs/G) ratio
+        clearsky_power = pvgis_data.get_clearsky_power(1, 1, 12)
+        expected_power = 1000.0 * (750.0 / 500.0)  # 1500 W
+        assert clearsky_power == expected_power
+
+    def test_clear_sky_fallback_to_model_without_gcs(self) -> None:
+        """Test that clear-sky calculation falls back to model when Gcs(i) is not available."""
+        # Create PVGIS data with G(i) and sun height but no Gcs(i)
+        hourly_data = {(1, 1, 12): 1000.0}
+        irradiance_data = {(1, 1, 12): 500.0}
+        sun_height_data = {(1, 1, 12): 45.0}
+        pvgis_data = PVGISData(hourly_data, irradiance_data, sun_height_data)
+
+        # Should use calculated clear-sky irradiance
+        clearsky_power = pvgis_data.get_clearsky_power(1, 1, 12)
+        # Should be higher than TMY
+        assert clearsky_power > 1000.0
+        # Should be in reasonable range
+        assert 1000.0 < clearsky_power < 2000.0
+
     def test_clear_sky_scaled_above_tmy(
         self, mock_pvgis_data_with_irradiance: PVGISData
     ) -> None:

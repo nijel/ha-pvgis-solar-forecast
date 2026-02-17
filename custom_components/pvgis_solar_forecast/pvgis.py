@@ -10,6 +10,11 @@ import aiohttp
 
 from .const import LOGGER, PVGIS_API_URL
 
+# Clear-sky calculation constants
+MIN_TMY_IRRADIANCE = 1.0  # Minimum TMY irradiance (W/m²) for scaling calculation
+MIN_SCALING_FACTOR = 1.0  # Minimum clear-sky scaling factor (TMY is lower bound)
+MAX_SCALING_FACTOR = 2.0  # Maximum clear-sky scaling factor (reasonable upper bound)
+
 
 class PVGISError(Exception):
     """Base exception for PVGIS API errors."""
@@ -31,6 +36,7 @@ class PVGISData:
         hourly_data: dict[tuple[int, int, int], float],
         irradiance_data: dict[tuple[int, int, int], float] | None = None,
         sun_height_data: dict[tuple[int, int, int], float] | None = None,
+        clearsky_irradiance_data: dict[tuple[int, int, int], float] | None = None,
     ) -> None:
         """Initialize PVGISData.
 
@@ -38,11 +44,13 @@ class PVGISData:
             hourly_data: Mapping from (month, day, hour) to power output in watts.
             irradiance_data: Mapping from (month, day, hour) to irradiance in W/m².
             sun_height_data: Mapping from (month, day, hour) to sun height in degrees.
+            clearsky_irradiance_data: Mapping from (month, day, hour) to clear-sky irradiance in W/m².
 
         """
         self.hourly_data = hourly_data
         self.irradiance_data = irradiance_data or {}
         self.sun_height_data = sun_height_data or {}
+        self.clearsky_irradiance_data = clearsky_irradiance_data or {}
 
     def get_power(self, month: int, day: int, hour: int) -> float:
         """Get power output in watts for a given month, day, and hour.
@@ -86,14 +94,29 @@ class PVGISData:
         """
         return self.sun_height_data.get((month, day, hour), 0.0)
 
+    def get_clearsky_irradiance(self, month: int, day: int, hour: int) -> float:
+        """Get clear-sky irradiance in W/m² for a given month, day, and hour.
+
+        Args:
+            month: Month (1-12).
+            day: Day of month (1-31).
+            hour: Hour of day (0-23).
+
+        Returns:
+            Clear-sky irradiance in W/m², or 0 if no data for this time.
+
+        """
+        return self.clearsky_irradiance_data.get((month, day, hour), 0.0)
+
     def get_clearsky_power(self, month: int, day: int, hour: int) -> float:
         """Calculate clear-sky power for a given month, day, and hour.
 
-        Uses the ratio method: P_clearsky = P_tmy × (G_clearsky / G_tmy)
-        where G_clearsky is calculated from sun position and day of year.
+        Uses PVGIS clear-sky irradiance data (Gcs(i)) to calculate clear-sky power:
+        P_clearsky = P_tmy × (Gcs(i) / G(i))
 
-        If irradiance or sun height data is not available, returns the
-        TMY power value (fallback to old behavior).
+        If clear-sky irradiance is not available, falls back to calculating it
+        from sun position and day of year. If irradiance data is also not available,
+        returns the TMY power value.
 
         Args:
             month: Month (1-12).
@@ -106,29 +129,38 @@ class PVGISData:
         """
         tmy_power = self.get_power(month, day, hour)
         tmy_irradiance = self.get_irradiance(month, day, hour)
+        clearsky_irradiance = self.get_clearsky_irradiance(month, day, hour)
+
+        # If we have PVGIS clear-sky irradiance data, use it directly
+        if clearsky_irradiance > 0 and tmy_irradiance >= MIN_TMY_IRRADIANCE:
+            # Scale power by irradiance ratio using PVGIS clear-sky data
+            scaling_factor = clearsky_irradiance / tmy_irradiance
+            # Clamp to reasonable range (TMY shouldn't be higher than clear-sky)
+            scaling_factor = max(
+                MIN_SCALING_FACTOR, min(scaling_factor, MAX_SCALING_FACTOR)
+            )
+            return tmy_power * scaling_factor
+
+        # Fallback: calculate clear-sky irradiance from sun position
         sun_height = self.get_sun_height(month, day, hour)
+        if tmy_irradiance >= MIN_TMY_IRRADIANCE and sun_height > 0:
+            # Calculate day of year (approximate - good enough for this purpose)
+            days_in_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+            day_of_year = sum(days_in_month[:month]) + day
 
-        # If we don't have irradiance or sun height data, return TMY power
-        if not tmy_irradiance or not sun_height:
-            return tmy_power
+            # Calculate clear-sky irradiance using model
+            clearsky_irradiance = calculate_clearsky_irradiance(sun_height, day_of_year)
 
-        # Calculate day of year (approximate - good enough for this purpose)
-        days_in_month = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-        day_of_year = sum(days_in_month[:month]) + day
+            # Scale power by irradiance ratio
+            scaling_factor = clearsky_irradiance / tmy_irradiance
+            # Clamp to reasonable range
+            scaling_factor = max(
+                MIN_SCALING_FACTOR, min(scaling_factor, MAX_SCALING_FACTOR)
+            )
+            return tmy_power * scaling_factor
 
-        # Calculate clear-sky irradiance
-        clearsky_irradiance = calculate_clearsky_irradiance(sun_height, day_of_year)
-
-        # Avoid division by zero
-        if tmy_irradiance < 1.0:
-            return tmy_power
-
-        # Scale power by irradiance ratio
-        scaling_factor = clearsky_irradiance / tmy_irradiance
-        # Clamp to reasonable range (TMY shouldn't be higher than clear-sky)
-        scaling_factor = max(1.0, min(scaling_factor, 2.0))
-
-        return tmy_power * scaling_factor
+        # Final fallback: return TMY power
+        return tmy_power
 
 
 async def fetch_pvgis_data(
@@ -197,6 +229,7 @@ def _parse_pvgis_response(data: dict[str, Any]) -> PVGISData:
     The 'time' field is in format 'YYYYMMDD:HHMM' in UTC.
     The 'P' field is the PV system power output in watts.
     The 'G(i)' field is global irradiance on inclined plane in W/m².
+    The 'Gcs(i)' field is clear-sky irradiance on inclined plane in W/m².
     The 'H_sun' field is sun height in degrees.
 
     Args:
@@ -217,6 +250,7 @@ def _parse_pvgis_response(data: dict[str, Any]) -> PVGISData:
     hourly_data: dict[tuple[int, int, int], float] = {}
     irradiance_data: dict[tuple[int, int, int], float] = {}
     sun_height_data: dict[tuple[int, int, int], float] = {}
+    clearsky_irradiance_data: dict[tuple[int, int, int], float] = {}
 
     for item in hourly_items:
         try:
@@ -229,6 +263,7 @@ def _parse_pvgis_response(data: dict[str, Any]) -> PVGISData:
         # Parse optional fields
         irradiance = item.get("G(i)", 0.0)
         sun_height = item.get("H_sun", 0.0)
+        clearsky_irradiance = item.get("Gcs(i)", 0.0)
 
         try:
             dt = datetime.strptime(time_str, "%Y%m%d:%H%M")
@@ -248,14 +283,22 @@ def _parse_pvgis_response(data: dict[str, Any]) -> PVGISData:
                 sun_height_data[key] = (
                     sun_height_data.get(key, 0.0) + float(sun_height)
                 ) / 2
+            if clearsky_irradiance:
+                clearsky_irradiance_data[key] = (
+                    clearsky_irradiance_data.get(key, 0.0) + float(clearsky_irradiance)
+                ) / 2
         else:
             hourly_data[key] = power
             if irradiance:
                 irradiance_data[key] = float(irradiance)
             if sun_height:
                 sun_height_data[key] = float(sun_height)
+            if clearsky_irradiance:
+                clearsky_irradiance_data[key] = float(clearsky_irradiance)
 
-    return PVGISData(hourly_data, irradiance_data, sun_height_data)
+    return PVGISData(
+        hourly_data, irradiance_data, sun_height_data, clearsky_irradiance_data
+    )
 
 
 def calculate_clearsky_irradiance(sun_height_deg: float, day_of_year: int) -> float:
