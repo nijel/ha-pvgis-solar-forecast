@@ -77,6 +77,7 @@ class ForecastSnapshot:
 
     timestamp: datetime
     wh_hours: dict[str, float]
+    cloud_coverage: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -345,6 +346,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 temperature_data,
                 precipitation_data,
                 snow_data,
+                self.data.historical_snapshots if self.data else None,
             )
 
             # Set snow status on forecast
@@ -384,7 +386,11 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         # Add current forecast as a new snapshot
         result.historical_snapshots.append(
-            ForecastSnapshot(timestamp=now, wh_hours=total_wh.copy())
+            ForecastSnapshot(
+                timestamp=now,
+                wh_hours=total_wh.copy(),
+                cloud_coverage=cloud_coverage.copy() if cloud_coverage else {},
+            )
         )
 
         # Save the forecast to storage for restoration on next startup
@@ -840,6 +846,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         temperature_data: dict[str, float] | None = None,
         precipitation_data: dict[str, float] | None = None,
         snow_data: dict[str, float] | None = None,
+        historical_snapshots: list[ForecastSnapshot] | None = None,
     ) -> SolarArrayForecast:
         """Compute forecast for a single array."""
         forecast = SolarArrayForecast()
@@ -871,7 +878,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
             # Apply cloud coverage factor
-            cloud_factor = self.get_cloud_factor(dt, cloud_coverage)
+            # For past hours, try to use historical cloud coverage from snapshots
+            # to avoid retroactively applying current weather to past hours
+            cloud_coverage_to_use = cloud_coverage
+            if dt < now_hour and historical_snapshots:
+                historical_cloud = self.get_historical_cloud_coverage(
+                    dt, historical_snapshots
+                )
+                if historical_cloud:
+                    cloud_coverage_to_use = historical_cloud
+
+            cloud_factor = self.get_cloud_factor(dt, cloud_coverage_to_use)
             adjusted_power = clear_sky_power * cloud_factor
 
             # Predict snow for this specific hour if weather data available
@@ -1082,6 +1099,47 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
         return CLOUD_FACTOR_CLEAR - cloud_pct * (
             CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST
         )
+
+    def get_historical_cloud_coverage(
+        self, dt: datetime, historical_snapshots: list[ForecastSnapshot]
+    ) -> dict[str, float] | None:
+        """Get cloud coverage from historical snapshots for a past hour.
+
+        For hours that have already occurred, try to find the cloud coverage
+        that was actually observed/forecasted at or near that time, rather than
+        using current forecast data which may be different.
+
+        Args:
+            dt: The datetime to get cloud coverage for (must be timezone-aware).
+            historical_snapshots: List of historical forecast snapshots.
+
+        Returns:
+            Cloud coverage dict if found in snapshots, None otherwise.
+        """
+        if not historical_snapshots:
+            return None
+
+        # Look for the most recent snapshot that has data for this hour
+        # We want a snapshot from close to that hour, not from much later
+        dt_hour = dt.replace(minute=0, second=0, microsecond=0)
+        dt_key = dt_hour.isoformat()
+
+        best_snapshot: ForecastSnapshot | None = None
+        best_time_diff = timedelta.max
+
+        for snapshot in historical_snapshots:
+            # Check if this snapshot has cloud coverage data for the target hour
+            if dt_key in snapshot.cloud_coverage:
+                # Find snapshot closest to the target hour (prefer earlier snapshots)
+                time_diff = abs(dt_hour - snapshot.timestamp)
+                if time_diff < best_time_diff:
+                    best_time_diff = time_diff
+                    best_snapshot = snapshot
+
+        if best_snapshot and best_time_diff < timedelta(hours=3):
+            return best_snapshot.cloud_coverage
+
+        return None
 
     @staticmethod
     def _cleanup_historical_snapshots(
