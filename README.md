@@ -69,8 +69,9 @@ The integration creates the following sensors for each array and for the total:
 | Clear sky energy today            | Theoretical energy under ideal clear-sky        | kWh       |
 
 **Note**: Clear sky sensors represent theoretical maximum production under ideal
-conditions (0% clouds). These values are derived from PVGIS Typical Meteorological
-Year (TMY) data scaled by a factor of 1.3 to approximate true clear-sky conditions.
+conditions (0% clouds). These values are calculated dynamically using PVGIS irradiance
+data and a clear-sky model, accounting for seasonal variations in typical weather
+(winter is cloudier than summer).
 
 ## Energy Dashboard
 
@@ -83,13 +84,15 @@ your energy configuration.
 1. **PVGIS Data**: The integration fetches hourly PV production estimates from
    the PVGIS API based on your panel configuration and location. This data
    represents typical production averaged over multiple years (Typical
-   Meteorological Year - TMY). It is cached and refreshed monthly since the
-   underlying data doesn't change.
+   Meteorological Year - TMY), which includes typical cloud coverage patterns.
+   It is cached and refreshed monthly since the underlying data doesn't change.
 
 1. **Clear Sky Estimates**: The integration provides clear-sky sensors that
    represent theoretical maximum production under ideal conditions (0% clouds).
-   These are calculated by scaling the PVGIS TMY data by a factor of 1.3,
-   accounting for the typical cloud coverage included in TMY data.
+   These are calculated using the ratio method: `P_clearsky = P_tmy × (G_clearsky / G_tmy)`
+   where clear-sky irradiance (G_clearsky) is computed from sun position and
+   day of year. This accounts for seasonal variations - winter TMY data includes
+   more cloud effects than summer TMY data.
 
 1. **Weather Adjustment**: If a weather entity is configured, cloud coverage
    forecasts are used to adjust the PVGIS baseline estimates. The adjustment uses a

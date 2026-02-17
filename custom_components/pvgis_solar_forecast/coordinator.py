@@ -15,7 +15,6 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    CLEAR_SKY_FACTOR,
     CLOUD_FACTOR_CLEAR,
     CLOUD_FACTOR_OVERCAST,
     CONF_ARRAYS,
@@ -354,18 +353,15 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             forecast.snow_covered = snow_covered
 
             # Compute per-array clear sky diagnostics
-            # Apply CLEAR_SKY_FACTOR to convert PVGIS TMY data to true clear-sky estimate
-            # PVGIS TMY data includes typical weather (clouds), so we scale it up
-            array_clear_sky_now = (
-                array_data.pvgis_data.get_power(now.month, now.day, now.hour)
-                * CLEAR_SKY_FACTOR
+            # Use get_clearsky_power() which calculates clear-sky dynamically
+            # based on irradiance ratio: P_clearsky = P_tmy × (G_clearsky / G_tmy)
+            # This accounts for seasonal weather variations (winter=cloudy, summer=clear)
+            array_clear_sky_now = array_data.pvgis_data.get_clearsky_power(
+                now.month, now.day, now.hour
             )
-            array_clear_sky_today = (
-                sum(
-                    array_data.pvgis_data.get_power(now.month, now.day, h)
-                    for h in range(24)
-                )
-                * CLEAR_SKY_FACTOR
+            array_clear_sky_today = sum(
+                array_data.pvgis_data.get_clearsky_power(now.month, now.day, h)
+                for h in range(24)
             )
             forecast.clear_sky_power_now = round(array_clear_sky_now)
             forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
@@ -881,10 +877,13 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         for hour_offset in range(total_hours):
             dt = today_start + timedelta(hours=hour_offset)
-            # Get clear-sky power from PVGIS
-            clear_sky_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            # Get TMY power from PVGIS (used for forecast calculations)
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
 
-            # Apply cloud coverage factor
+            # Get clear-sky power for this hour (accounts for seasonal variations)
+            clear_sky_power = pvgis_data.get_clearsky_power(dt.month, dt.day, dt.hour)
+
+            # Apply cloud coverage factor to TMY power
             # For past hours, try to use historical cloud coverage from snapshots
             # to avoid retroactively applying current weather to past hours
             cloud_coverage_to_use = cloud_coverage
@@ -896,7 +895,7 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cloud_coverage_to_use = historical_cloud
 
             cloud_factor = self.get_cloud_factor(dt, cloud_coverage_to_use)
-            adjusted_power = clear_sky_power * cloud_factor
+            adjusted_power = tmy_power * cloud_factor
 
             # Predict snow for this specific hour if weather data available
             hour_snow_covered = snow_covered  # Default to current state
@@ -931,10 +930,8 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                 {
                     "period_start": ts_key,
                     "pv_estimate": round(adjusted_power / 1000.0, 4),
-                    # Apply CLEAR_SKY_FACTOR to convert PVGIS TMY to true clear-sky
-                    "pv_estimate_clear_sky": round(
-                        clear_sky_power * CLEAR_SKY_FACTOR / 1000.0, 4
-                    ),
+                    # Use dynamically calculated clear-sky power
+                    "pv_estimate_clear_sky": round(clear_sky_power / 1000.0, 4),
                     "cloud_coverage": round(
                         (1.0 - cloud_factor)
                         / (CLOUD_FACTOR_CLEAR - CLOUD_FACTOR_OVERCAST)

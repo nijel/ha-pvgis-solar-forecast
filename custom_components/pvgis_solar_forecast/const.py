@@ -45,12 +45,6 @@ MOUNTING_PLACE_OPTIONS = ["free", "building"]
 CLOUD_FACTOR_CLEAR = 1.0  # 0% clouds
 CLOUD_FACTOR_OVERCAST = 0.2  # 100% clouds
 
-# Clear-sky scaling factor
-# PVGIS TMY data includes typical weather conditions (clouds, etc)
-# To estimate true clear-sky values, we scale up the PVGIS baseline
-# Research shows TMY represents ~75-80% of clear-sky conditions on average
-CLEAR_SKY_FACTOR = 1.3  # Scale PVGIS TMY data by 30% to approximate clear-sky
-
 # Snow detection constants
 # Temperature threshold (°C) - snow persists below this
 SNOW_TEMP_THRESHOLD = 2.0
