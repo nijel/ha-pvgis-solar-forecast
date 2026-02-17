@@ -11,7 +11,6 @@ from custom_components.pvgis_solar_forecast.coordinator import (
 )
 from custom_components.pvgis_solar_forecast.pvgis import PVGISData
 
-
 UTC = ZoneInfo("UTC")
 
 
@@ -108,7 +107,9 @@ class TestClearSkyScaling:
         total_pvgis_today = sum(
             mock_pvgis_data.get_power(now.month, now.day, h) for h in range(24)
         )
-        expected_clear_sky_today = total_pvgis_today * CLEAR_SKY_FACTOR / 1000.0  # Wh to kWh
+        expected_clear_sky_today = (
+            total_pvgis_today * CLEAR_SKY_FACTOR / 1000.0
+        )  # Wh to kWh
 
         # Note: clear_sky_energy_today is not set by compute_forecast directly
         # It's calculated in the coordinator's _async_update_data method

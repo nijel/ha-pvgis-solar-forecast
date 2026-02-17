@@ -356,13 +356,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             # Compute per-array clear sky diagnostics
             # Apply CLEAR_SKY_FACTOR to convert PVGIS TMY data to true clear-sky estimate
             # PVGIS TMY data includes typical weather (clouds), so we scale it up
-            array_clear_sky_now = array_data.pvgis_data.get_power(
-                now.month, now.day, now.hour
-            ) * CLEAR_SKY_FACTOR
-            array_clear_sky_today = sum(
-                array_data.pvgis_data.get_power(now.month, now.day, h)
-                for h in range(24)
-            ) * CLEAR_SKY_FACTOR
+            array_clear_sky_now = (
+                array_data.pvgis_data.get_power(now.month, now.day, now.hour)
+                * CLEAR_SKY_FACTOR
+            )
+            array_clear_sky_today = (
+                sum(
+                    array_data.pvgis_data.get_power(now.month, now.day, h)
+                    for h in range(24)
+                )
+                * CLEAR_SKY_FACTOR
+            )
             forecast.clear_sky_power_now = round(array_clear_sky_now)
             forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
 
