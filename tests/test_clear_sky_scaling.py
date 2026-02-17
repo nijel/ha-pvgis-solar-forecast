@@ -67,8 +67,10 @@ class TestClearSkyCalculation:
     def test_clear_sky_uses_pvgis_gcs_data(self) -> None:
         """Test that clear-sky calculation uses PVGIS Gcs(i) data when available."""
         # Create PVGIS data with clear-sky irradiance
-        hourly_data = {(1, 1, 12): 1000.0}  # TMY power
-        irradiance_data = {(1, 1, 12): 500.0}  # TMY irradiance
+        hourly_data = {(1, 1, 12): 1000.0}  # Typical Meteorological Year (TMY) power
+        irradiance_data = {
+            (1, 1, 12): 500.0
+        }  # Typical Meteorological Year (TMY) irradiance
         clearsky_irradiance_data = {
             (1, 1, 12): 750.0
         }  # Clear-sky irradiance (1.5x TMY irradiance)
