@@ -45,6 +45,12 @@ MOUNTING_PLACE_OPTIONS = ["free", "building"]
 CLOUD_FACTOR_CLEAR = 1.0  # 0% clouds
 CLOUD_FACTOR_OVERCAST = 0.2  # 100% clouds
 
+# Forecast adjustment factor
+# PVGIS TMY data and Gcs(i) clear-sky irradiance tend to be conservative.
+# This factor adjusts forecasts upward to better match real-world production.
+# Based on user reports that forecasts were about 1/2 of actual under clear skies.
+FORECAST_BOOST_FACTOR = 1.35
+
 # Snow detection constants
 # Temperature threshold (°C) - snow persists below this
 SNOW_TEMP_THRESHOLD = 2.0
