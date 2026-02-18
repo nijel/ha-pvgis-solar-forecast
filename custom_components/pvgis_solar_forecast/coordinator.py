@@ -30,6 +30,7 @@ from .const import (
     DEFAULT_MOUNTING_PLACE,
     DEFAULT_PV_TECH,
     DOMAIN,
+    FORECAST_BOOST_FACTOR,
     LOGGER,
     PV_TECH_API_MAP,
     SNOW_FACTOR_COVERED,
@@ -356,12 +357,17 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
             # Use get_clearsky_power() which calculates clear-sky dynamically
             # based on irradiance ratio: P_clearsky = P_tmy × (G_clearsky / G_tmy)
             # This accounts for seasonal weather variations (winter=cloudy, summer=clear)
-            array_clear_sky_now = array_data.pvgis_data.get_clearsky_power(
-                now.month, now.day, now.hour
+            # Apply boost factor to account for PVGIS conservatism
+            array_clear_sky_now = (
+                array_data.pvgis_data.get_clearsky_power(now.month, now.day, now.hour)
+                * FORECAST_BOOST_FACTOR
             )
-            array_clear_sky_today = sum(
-                array_data.pvgis_data.get_clearsky_power(now.month, now.day, h)
-                for h in range(24)
+            array_clear_sky_today = (
+                sum(
+                    array_data.pvgis_data.get_clearsky_power(now.month, now.day, h)
+                    for h in range(24)
+                )
+                * FORECAST_BOOST_FACTOR
             )
             forecast.clear_sky_power_now = round(array_clear_sky_now)
             forecast.clear_sky_energy_today = round(array_clear_sky_today / 1000.0, 2)
@@ -879,11 +885,16 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
 
         for hour_offset in range(total_hours):
             dt = today_start + timedelta(hours=hour_offset)
-            # Get clear-sky power for this hour (accounts for seasonal variations)
-            # This is the baseline power under clear sky conditions
+            # Get TMY (typical) power and irradiance for this hour
+            tmy_power = pvgis_data.get_power(dt.month, dt.day, dt.hour)
+            tmy_irradiance = pvgis_data.get_irradiance(dt.month, dt.day, dt.hour)
+            clearsky_irradiance = pvgis_data.get_clearsky_irradiance(
+                dt.month, dt.day, dt.hour
+            )
+
+            # Calculate clear-sky power for sensors (independent of weather)
             clear_sky_power = pvgis_data.get_clearsky_power(dt.month, dt.day, dt.hour)
 
-            # Apply cloud coverage factor to TMY power
             # For past hours, try to use historical cloud coverage from snapshots
             # to avoid retroactively applying current weather to past hours
             cloud_coverage_to_use = cloud_coverage
@@ -895,9 +906,22 @@ class PVGISSolarForecastCoordinator(DataUpdateCoordinator[SolarForecastData]):
                     cloud_coverage_to_use = historical_cloud
 
             cloud_factor = self.get_cloud_factor(dt, cloud_coverage_to_use)
-            # Apply cloud factor to clear-sky power (baseline without clouds)
-            # rather than TMY power (which already includes typical weather)
-            adjusted_power = clear_sky_power * cloud_factor
+
+            # Calculate forecast power using irradiance-based adjustment from TMY baseline
+            # The cloud_factor already represents the irradiance reduction:
+            #   cloud_factor = 1.0 (0% clouds) → 100% of clear-sky irradiance
+            #   cloud_factor = 0.2 (100% clouds) → 20% of clear-sky irradiance
+            # Forecasted irradiance = cloud_factor × clear-sky irradiance
+            # Forecast power = TMY power × (forecasted irradiance / TMY irradiance)
+            if tmy_irradiance > 0 and clearsky_irradiance > 0:
+                forecast_irradiance = cloud_factor * clearsky_irradiance
+                adjusted_power = tmy_power * (forecast_irradiance / tmy_irradiance)
+                # Apply boost factor to account for PVGIS conservatism
+                adjusted_power *= FORECAST_BOOST_FACTOR
+            else:
+                # Fallback if no irradiance data: scale TMY power directly
+                # This is less accurate but better than nothing
+                adjusted_power = tmy_power * cloud_factor * FORECAST_BOOST_FACTOR
 
             # Predict snow for this specific hour if weather data available
             hour_snow_covered = snow_covered  # Default to current state

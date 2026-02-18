@@ -89,17 +89,21 @@ your energy configuration.
 
 1. **Clear Sky Estimates**: The integration provides clear-sky sensors that
    represent theoretical maximum production under ideal conditions (0% clouds).
-   These are calculated using the ratio method: `P_clearsky = P_tmy × (G_clearsky / G_tmy)`
-   where clear-sky irradiance (G_clearsky) is computed from sun position and
-   day of year. This accounts for seasonal variations - winter TMY data includes
+   These are calculated by scaling PVGIS TMY power using the ratio of clear-sky
+   irradiance to TMY irradiance: `P_clearsky = P_tmy × (G_clearsky / G_tmy)`.
+   A boost factor is applied to account for PVGIS conservatism and real-world
+   conditions. This accounts for seasonal variations - winter TMY data includes
    more cloud effects than summer TMY data.
 
 1. **Weather Adjustment**: If a weather entity is configured, cloud coverage
-   forecasts are used to adjust the PVGIS baseline estimates. The adjustment uses a
-   linear mapping where 0% clouds = 100% of PVGIS baseline and 100%
-   clouds = 20% of PVGIS baseline. If both primary and secondary weather
-   entities are configured, the primary forecast is used when available, and
-   the secondary provides extended forecast data beyond the primary's horizon.
+   forecasts are used to adjust production estimates. The forecast is calculated
+   by scaling TMY power based on forecasted irradiance relative to TMY irradiance:
+   `P_forecast = P_tmy × (I_forecast / I_tmy)`, where forecasted irradiance is
+   interpolated between clear-sky (0% clouds) and overcast (100% clouds = 20% of
+   clear-sky). A boost factor is applied to better match real-world production.
+   If both primary and secondary weather entities are configured, the primary
+   forecast is used when available, and the secondary provides extended forecast
+   data beyond the primary's horizon.
 
 1. **Forecast Generation**: The integration combines PVGIS data with weather
    forecasts to produce hourly production estimates for up to 7 days. The actual
