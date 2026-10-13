@@ -20,6 +20,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import (
@@ -343,7 +344,7 @@ class PVGISDiagnosticSensor(
             self._attr_device_class = device_class
         if display_precision is not None:
             self._attr_suggested_display_precision = display_precision
-        self.entity_id = f"{SENSOR_DOMAIN}.pvgis_{key}"
+        self.entity_id = f"{SENSOR_DOMAIN}.{slugify(f'pvgis_{key}')}"
 
         if array_name:
             device_id = f"{entry_id}_{array_name}"

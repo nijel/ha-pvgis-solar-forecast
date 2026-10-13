@@ -2,13 +2,87 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.pvgis_solar_forecast.const import DOMAIN
-from homeassistant.core import HomeAssistant
+from custom_components.pvgis_solar_forecast.const import CONF_ARRAYS, DOMAIN
+from custom_components.pvgis_solar_forecast.coordinator import (
+    PVGISSolarForecastCoordinator,
+)
+from custom_components.pvgis_solar_forecast.sensor import PVGISDiagnosticSensor
+from homeassistant.core import HomeAssistant, valid_entity_id
+from homeassistant.helpers import entity_registry as er
+
+
+@pytest.mark.parametrize("key", ["clear_sky_power_now", "clear_sky_energy_today"])
+@pytest.mark.parametrize(
+    ("array_name", "object_id_suffix"),
+    [
+        ("Jihovýchod", "jihovychod"),
+        ("Jihozápad", "jihozapad"),
+        ("South Roof", "south_roof"),
+        ("Roof / West!", "roof_west"),
+    ],
+)
+def test_diagnostic_entity_id(key: str, array_name: str, object_id_suffix: str) -> None:
+    """Test diagnostic IDs are valid before Home Assistant registers them."""
+    sensor = PVGISDiagnosticSensor(
+        entry_id="test_entry",
+        coordinator=Mock(spec=PVGISSolarForecastCoordinator),
+        key=f"{key}_{array_name}",
+        translation_key=key,
+        array_name=array_name,
+    )
+
+    assert valid_entity_id(sensor.entity_id)
+    assert sensor.entity_id == f"sensor.pvgis_{key}_{object_id_suffix}"
+    assert sensor.unique_id == f"test_entry_{key}_{array_name}"
+
+
+@pytest.mark.asyncio
+async def test_diagnostic_entity_registry_preserved(
+    hass: HomeAssistant,
+    mock_pvgis_fetch: AsyncMock,
+    enable_custom_integrations: None,
+    mock_config_data: dict,
+    mock_config_options: dict,
+) -> None:
+    """Test accented array names retain registered IDs and create valid new IDs."""
+    options = {
+        **mock_config_options,
+        CONF_ARRAYS: [
+            {**mock_config_options[CONF_ARRAYS][0], "name": name}
+            for name in ("Jihovýchod", "Jihozápad")
+        ],
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=mock_config_data,
+        options=options,
+    )
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    existing = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{entry.entry_id}_clear_sky_power_now_Jihovýchod",
+        suggested_object_id="custom_clear_sky_power",
+        config_entry=entry,
+    )
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    for entity_id in (
+        existing.entity_id,
+        "sensor.pvgis_clear_sky_energy_today_jihovychod",
+        "sensor.pvgis_clear_sky_power_now_jihozapad",
+        "sensor.pvgis_clear_sky_energy_today_jihozapad",
+    ):
+        assert hass.states.get(entity_id) is not None
+    assert not hass.states.get("sensor.pvgis_clear_sky_power_now_jihovychod")
 
 
 @pytest.mark.asyncio
